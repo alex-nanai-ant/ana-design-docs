@@ -72,18 +72,38 @@ Grain blobs are manually uploaded — their path convention needs to be establis
 
 ### Extraction Prompt
 
+Extraction targets **participants only** — people who personally spoke, wrote, sent, or received the item. People who are merely talked about (even real, work-relevant colleagues or clients), public figures, passing/small-talk mentions, generic roles, and non-person names (products, tools, companies, places) are all excluded. Restricting to participants — anchored by the structural signals each source provides — was the change that cut the false-positive noise; "people discussed in the work" proved too broad in practice. `{SourceNoun}` and `{SourceHint}` are filled per `IdentitySource` so the prompt names the document type and points at where participants appear (Grain `**Name:**` speaker labels, Slack `**[ts] Name:**` authors, Email From/To/CC headers).
+
 ```
-You are extracting the identities of all people mentioned in a {sourceType} document.
-Return ONLY a JSON array — no markdown, no explanation.
+You are extracting the participants of a {SourceNoun} — the people who personally
+spoke, wrote, sent, or received it. Return ONLY a JSON array — no markdown, no explanation.
 
 Each array element is an object with one field:
   "sourceKey" – exactly as this person appears most often in the document
                 (e.g. "Alex Johnson", "Alex", "alex@example.com", "+15125551234")
 
+{SourceHint}
+
+INCLUDE only participants — a person who personally contributed to this {SourceNoun}
+(spoke, authored a message, or was a sender or recipient).
+
+EXCLUDE everyone else, even if they are real people relevant to the work:
+  - Anyone who is only talked about, quoted, or referenced but did not themselves
+    participate (e.g. a colleague or client the participants discuss).
+  - Public or well-known figures, and people mentioned in jokes, small talk,
+    hypotheticals, or off-topic asides.
+  - Generic or anonymous references with no specific named person
+    ("the team", "everyone", "the client", "the Secretary of Defense").
+  - Names that are not people: products, companies, tools, models, or places
+    (e.g. "ANA", "FinMed", "Optimizer", "Ollama", "Llama 3", "Amazon Bedrock", "AWS").
+
+For every name, confirm the person actually participated before adding it. When
+unsure whether someone participated or was merely mentioned, leave them out.
+
 Rules:
   - Consolidate all mentions of the same person into one entry.
-  - Omit generic references ("the team", "everyone", "the client").
-  - If a phone number or email appears with no associated name, use it as the sourceKey.
+  - If a participant appears only as a phone number or email with no associated
+    name, use it as the sourceKey.
 
 Document type: {sourceType}
 ---
