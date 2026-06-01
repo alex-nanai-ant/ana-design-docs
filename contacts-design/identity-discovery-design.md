@@ -23,46 +23,36 @@ Since these blobs are exactly what gets searched for RAG, identity discovery mus
 ## 2. Architecture Overview
 
 ```
-Blob created/updated (any source)
+Scheduled tick (in-API BackgroundService, every 15 min)
       │
       ▼
-AltusAiIdentityDiscovery  (new Azure Function)
+For each active client → IdentityDiscoveryService.RunDiscovery
       │
-      ├─ Determine: clientId + IdentitySource from blob path/metadata
-      ├─ Skip if content hash unchanged since last run
-      ├─ Call GPT: extract persons from markdown content
+      ├─ List blobs; map IdentitySource from `sourceType` metadata
+      ├─ Skip blobs outside the modified-since window
+      ├─ Skip if blob LastModified unchanged since last run (Table Storage state)
+      ├─ Call GPT: extract participants from content
       │
       └─ For each extracted person:
             ContactsService.UpsertObservedIdentity(
                 clientId, source, sourceKey, displayLabel, ct)
             → inserts new (unassigned) ContactIdentity, or returns existing row
-            + insert IdentityEvidence row (snippet + blob path)
+            + record the blob's sourceKeys in the Table Storage state row (provenance)
 ```
 
-The discovery function is a new caller of the existing `ContactsService` (which already has `CreateIdentity`/`UpdateIdentity`). It adds one new method — `UpsertObservedIdentity` — to avoid forcing the function to handle 409s from race conditions.
+Discovery is a new caller of the existing `ContactsService` (which already has `CreateIdentity`/`UpdateIdentity`). It adds one method — `UpsertObservedIdentity` — which inserts an unassigned identity or returns the existing row (and reports whether it created one), so callers never have to handle 409s from race conditions.
 
 ---
 
 ## 3. Trigger Mechanism
 
-**Option: timer-based scan (recommended for v1).** Every 15 minutes, scan the blob container for items whose `LastModified` is newer than the last successful run timestamp. Simpler to deploy than EventGrid subscriptions, and identity review is not time-critical enough to need real-time triggering.
+**Scheduled scan (v1).** An in-API `BackgroundService` on a `PeriodicTimer` (every 15 min) — the same in-process scheduled-job pattern as `GrainSynchronizer`, with full EF/scoped access. It is **schedule-only** (no run at startup); the first run is one interval after boot. A run loops active clients and calls `IdentityDiscoveryService.RunDiscovery` per client. The scan only considers blobs modified within a window (default last 3 days) so most history is ignored without any per-blob work. The existing manual endpoint can trigger the same logic on demand with a caller-supplied window.
 
-**Option: EventGrid (v2).** If near-real-time discovery becomes needed, EventGrid on the blob containers feeds a Storage Queue; the function consumes from the queue. Handles backpressure during bulk initial loads.
+**Option: EventGrid (later).** If near-real-time discovery is ever needed, EventGrid on the blob containers feeds a Storage Queue consumed by a worker. Handles backpressure during bulk initial loads.
 
-**Path-to-metadata mapping.** The blob path and blob metadata (`sourceType` field) are used to determine `clientId` and `IdentitySource`. Blob path conventions from existing sync workers:
+**Source mapping.** `IdentitySource` is derived from the blob's `sourceType` metadata (`Slack`/`Grain`/`Email` → matching enum; anything else → skip), not from the blob path. The client is the blob container.
 
-```
-{containerName}  ←  maps to clientId via existing container→client lookup
-  Slack/{channel}/{chunk}.md             → IdentitySource.Slack
-  Slack/{channel}/{date}/{file}          → IdentitySource.Slack
-  Email/{date} ({from})/{subject}/...   → IdentitySource.Email
-  {SpaceKey}/{page}.md                   → IdentitySource.Confluence
-  {anything else}                        → IdentitySource.Unknown (skip or treat as Grain)
-```
-
-Grain blobs are manually uploaded — their path convention needs to be established. Until then, treat unrecognized paths as `Unknown`.
-
-**Change detection.** A `IdentityDiscoveryState` table in Azure Table Storage (PartitionKey = clientId, RowKey = SHA256(blobPath)) stores the last-processed blob ETag. If ETag unchanged, skip. This mirrors the pattern already used by the existing sync workers.
+**Change detection.** A `IdentityDiscoveryState` table in Azure Table Storage (PartitionKey = clientId, RowKey = SHA256(blobPath)) stores the last-processed blob `LastModified` plus the list of `sourceKey`s found in that blob (provenance). If the blob's current `LastModified` is not newer, skip. This mirrors the timestamp-tracking pattern already used by the existing sync workers.
 
 ---
 
@@ -134,8 +124,7 @@ When the same person appears in multiple documents, subsequent runs hit the exis
 Add one method to `IContactsService` (the existing service interface):
 
 ```csharp
-// Internal — called by AltusAiIdentityDiscovery. NOT exposed via HTTP.
-Task<ContactIdentityDto> UpsertObservedIdentity(
+Task<(ContactIdentityDto Dto, bool Created)> UpsertObservedIdentity(
     int clientId,
     IdentitySource source,
     string sourceKey,
@@ -145,8 +134,10 @@ Task<ContactIdentityDto> UpsertObservedIdentity(
 
 Implementation:
 1. Try to load existing `ContactIdentity` by `(clientId, source, sourceKey)`.
-2. If found: update `DisplayLabel` if the new label is longer/more specific; return existing row.
-3. If not found: insert new `ContactIdentity` with `ContactId = null` (unassigned).
+2. If found: return it (unchanged), flagged as not created.
+3. If not found: insert new `ContactIdentity` with `ContactId = null` (unassigned), flagged as created.
+
+The `Created` flag lets the discovery run count net-new identities.
 
 This is the only addition to the existing contacts service required for discovery. The rest of the identity lifecycle (review, assign, merge) already exists or is covered by the API design.
 
@@ -176,7 +167,7 @@ public class ContactIdentityEvidence : BaseEntity {
 
 ### `IdentityDiscoveryState` (Azure Table Storage)
 
-Not a SQL table — same approach as sync workers. Stores last-processed ETag per blob to make the timer scan idempotent.
+Not a SQL table — same approach as sync workers. Stores, per blob, the last-processed `LastModified` (makes the scan idempotent) and the list of `sourceKey`s found in that blob. That per-blob `sourceKey` list is the lightweight **provenance** record used in place of the deferred `ContactIdentityEvidence` table — it is read-only context, never used to auto-remove identities.
 
 ---
 
@@ -201,21 +192,20 @@ No other API changes are required. The existing `GET /identities?unassigned=true
 
 ---
 
-## 8. New Azure Function: `AltusAiIdentityDiscovery`
+## 8. Runner: in-API `BackgroundService`
 
-New project following the same structure as `AltusAiConfluenceSync`, `AltusAiSlackSync`, etc.
+Discovery runs inside the API process, not as a separate Azure Function — all the identity code (`IdentityDiscoveryService`, `IdentityExtractionService`, `ContactsService`, EF context) already lives there, and the API already hosts scheduled work via `GrainSynchronizer`. Components:
 
 ```
-AltusAiIdentityDiscovery/
-  IdentityDiscoveryFunction.cs       — timer-triggered entry point
-  IdentityExtractionService.cs       — GPT call + JSON response parsing
-  BlobPathParser.cs                  — blob path → (clientId, IdentitySource)
-  DiscoveryStateRepository.cs        — Table Storage ETag tracking
+IdentityDiscoveryBackgroundService  — PeriodicTimer (15 min), schedule-only, gated by config flag
+IdentityDiscoveryRunner             — loops active clients → RunDiscovery per client
+IdentityDiscoveryService            — per-client scan + GPT extraction + upsert (already exists)
+IdentityDiscoveryStateRepository    — Table Storage LastModified + sourceKey tracking
 ```
 
-The function takes `IContactsService` via DI — the same interface used by the API controllers.
+The background service and the existing manual endpoint share the same `RunDiscovery` logic. Source is mapped from blob `sourceType` metadata; there is no blob-path parser.
 
-**Error handling:** GPT parse failures (malformed JSON, refusal) are logged and the blob ETag is NOT updated, so the next timer run retries. After 3 consecutive failures on the same blob, write a poison marker to Table Storage and alert (same pattern as existing sync workers).
+**Error handling:** GPT parse failures (malformed JSON, refusal) and read errors are logged and the blob's `LastModified` is NOT recorded, so the next run retries. After a few consecutive failures on the same blob, mark it poison in Table Storage and alert (same pattern as existing sync workers).
 
 ---
 
@@ -223,9 +213,9 @@ The function takes `IContactsService` via DI — the same interface used by the 
 
 **Per-file cost.** One GPT-4o call per changed blob. Typical Grain transcript ~3K tokens input + ~500 tokens output ≈ $0.01–0.03 per file at current rates.
 
-**Initial load.** All existing blobs processed on first deploy. Throttle via `maxConcurrentFunctions` setting. 500 blobs × $0.02 ≈ $10 one-time cost.
+**Initial load.** The backfill is a one-time manual endpoint call with an old `modifiedSince` so all existing blobs are processed. 500 blobs × $0.02 ≈ $10 one-time cost.
 
-**Steady-state.** Only blobs with changed ETags are processed. Low frequency after initial load.
+**Steady-state.** Only blobs modified within the window whose `LastModified` advanced are processed. Low frequency after initial load.
 
 **Large blobs.** Confluence pages can be large. If content exceeds token limit, split at `## ` boundaries and merge. Each split = one additional GPT call. Log split counts to estimate actual costs in production.
 
@@ -233,7 +223,6 @@ The function takes `IContactsService` via DI — the same interface used by the 
 
 ## 10. Open Questions
 
-- **Grain blob path convention.** Grain transcripts are manually uploaded — their container/path structure isn't defined yet. Need to establish this before the `BlobPathParser` can map them to `IdentitySource.Grain`.
-- **`IdentityEvidence` in v1 or deferred.** Build `UpsertObservedIdentity` and extraction first; add evidence table if reviewers say they can't recognize identities without context snippets.
-- **Timer vs. EventGrid.** Timer scan every 15 minutes is simpler for v1. Revisit if the delay is unacceptable in practice.
-- **Display label update policy.** When `UpsertObservedIdentity` finds an existing row, should it update `DisplayLabel` to the new value, keep the existing, or prefer longer? Current proposal: prefer the longer/more specific label (e.g., "Alex Johnson" beats "Alex").
+- **`ContactIdentityEvidence` (SQL) deferred.** The Table Storage per-blob `sourceKey` list covers lightweight provenance for now; add the SQL evidence table + `?includeEvidence` API only if reviewers need richer context snippets.
+- **Timer vs. EventGrid — resolved.** In-API `BackgroundService` on a 15-min timer for v1. Revisit EventGrid only if near-real-time becomes necessary.
+- **Display label update policy — resolved.** `UpsertObservedIdentity` does not mutate `DisplayLabel` on an existing row (keep first-seen). Reviewers consolidate variants via assignment/merge.
