@@ -23,30 +23,31 @@ Since these blobs are exactly what gets searched for RAG, identity discovery mus
 ## 2. Architecture Overview
 
 ```
-Scheduled tick (in-API BackgroundService, every 15 min)
+Timer tick (AltusAiProcessContent Azure Function, every 15 min)
       │
       ▼
-For each active client → IdentityDiscoveryService.RunDiscovery
+For each active client → IdentityDiscoveryRunner.RunDiscovery
       │
       ├─ List blobs; map IdentitySource from `sourceType` metadata
       ├─ Skip blobs outside the modified-since window
       ├─ Skip if blob LastModified unchanged since last run (Table Storage state)
+      ├─ Skip GPT if content hash unchanged (metadata-only write)
       ├─ Call GPT: extract participants from content
       │
       └─ For each extracted person:
-            ContactsService.UpsertObservedIdentity(
-                clientId, source, sourceKey, displayLabel, ct)
-            → inserts new (unassigned) ContactIdentity, or returns existing row
+            IdentityUpsertRepository.UpsertObservedIdentity(
+                clientId, source, sourceKey, ct)   // Dapper INSERT, race-safe on the unique index
+            → inserts new (unassigned) ContactIdentity, or no-ops on the existing row
             + record the blob's sourceKeys in the Table Storage state row (provenance)
 ```
 
-Discovery is a new caller of the existing `ContactsService` (which already has `CreateIdentity`/`UpdateIdentity`). It adds one method — `UpsertObservedIdentity` — which inserts an unassigned identity or returns the existing row (and reports whether it created one), so callers never have to handle 409s from race conditions.
+Discovery runs in a dedicated Azure Function (`AltusAiProcessContent`), not in the API. Following the sync-worker convention, it references `AltusAiShared` only and writes the `ContactIdentities` table directly via **Dapper** rather than EF. The upsert inserts an unassigned identity or no-ops on the existing row (reporting whether it created one), and is made idempotent at the DB by the `(ClientId, Source, SourceKey)` unique index — so concurrent runs never throw a constraint violation. The API retains ownership of the identity-review surface (read, assign, merge); only the *discovery write* moves out.
 
 ---
 
 ## 3. Trigger Mechanism
 
-**Scheduled scan (v1).** An in-API `BackgroundService` on a `PeriodicTimer` (every 15 min) — the same in-process scheduled-job pattern as `GrainSynchronizer`, with full EF/scoped access. It is **schedule-only** (no run at startup); the first run is one interval after boot. A run loops active clients and calls `IdentityDiscoveryService.RunDiscovery` per client. The scan only considers blobs modified within a window (default last 3 days) so most history is ignored without any per-blob work. The existing manual endpoint can trigger the same logic on demand with a caller-supplied window.
+**Scheduled scan (v1).** A `TimerTrigger` function in the `AltusAiProcessContent` Azure Function (every 15 min via cron `0 */15 * * * *`) — the same Azure Functions scheduled-worker pattern as `AltusAiSlackSync`/`AltusAiMailSync`. It is **schedule-only** (`RunOnStartup = false`), so it never fires at boot. A run loops active clients and calls `IdentityDiscoveryRunner.RunDiscovery` per client. The scan only considers blobs modified within a window (default last 3 days) so most history is ignored without any per-blob work. A companion **HTTP-triggered function** in the same project triggers the same logic on demand for a single client with a caller-supplied window (the backfill path), replacing the v0 API endpoint.
 
 **Option: EventGrid (later).** If near-real-time discovery is ever needed, EventGrid on the blob containers feeds a Storage Queue consumed by a worker. Handles backpressure during bulk initial loads.
 
@@ -119,27 +120,24 @@ When the same person appears in multiple documents, subsequent runs hit the exis
 
 ---
 
-## 5. Changes to `ContactsService`
+## 5. Identity upsert (Dapper, in the Function)
 
-Add one method to `IContactsService` (the existing service interface):
+The discovery write goes through a small Dapper repository in `AltusAiProcessContent`, not the API's EF `ContactsService`:
 
 ```csharp
-Task<(ContactIdentityDto Dto, bool Created)> UpsertObservedIdentity(
+Task<bool> UpsertObservedIdentity(
     int clientId,
     IdentitySource source,
     string sourceKey,
-    string? displayLabel,
-    CancellationToken ct);
+    CancellationToken ct);   // returns true when a new row was inserted
 ```
 
 Implementation:
-1. Try to load existing `ContactIdentity` by `(clientId, source, sourceKey)`.
-2. If found: return it (unchanged), flagged as not created.
-3. If not found: insert new `ContactIdentity` with `ContactId = null` (unassigned), flagged as created.
+1. Insert a new `ContactIdentity` with `ContactId = null` (unassigned), `Source` stored as its int enum value, and the `BaseEntity` audit columns populated manually (EF's interceptor isn't in the loop).
+2. Make the insert atomic against the `(ClientId, Source, SourceKey)` unique index — `INSERT ... WHERE NOT EXISTS` / `MERGE`, or catch SQL 2601/2627 — so a row that already exists is a no-op.
+3. Report "created" from rows-affected.
 
-The `Created` flag lets the discovery run count net-new identities.
-
-This is the only addition to the existing contacts service required for discovery. The rest of the identity lifecycle (review, assign, merge) already exists or is covered by the API design.
+The created flag lets the discovery run count net-new identities. The API's contacts service is **not** modified for discovery; the v0 `ContactsService.UpsertObservedIdentity` is removed along with the API endpoint. The rest of the identity lifecycle (review, assign, merge) stays in the API as designed.
 
 ---
 
@@ -192,18 +190,21 @@ No other API changes are required. The existing `GET /identities?unassigned=true
 
 ---
 
-## 8. Runner: in-API `BackgroundService`
+## 8. Runner: `AltusAiProcessContent` Azure Function
 
-Discovery runs inside the API process, not as a separate Azure Function — all the identity code (`IdentityDiscoveryService`, `IdentityExtractionService`, `ContactsService`, EF context) already lives there, and the API already hosts scheduled work via `GrainSynchronizer`. Components:
+Discovery runs in a dedicated Azure Function, `AltusAiProcessContent` (its first function; the project is named generically so later content-processing functions can join it). It follows the sync-worker convention — references `AltusAiShared` only, reads config from environment variables, uses Dapper for SQL, and builds `IChatClient` against Azure OpenAI in `Program.cs`. Components:
 
 ```
-IdentityDiscoveryBackgroundService  — PeriodicTimer (15 min), schedule-only, gated by config flag
-IdentityDiscoveryRunner             — loops active clients → RunDiscovery per client
-IdentityDiscoveryService            — per-client scan + GPT extraction + upsert (already exists)
-IdentityDiscoveryStateRepository    — Table Storage LastModified + sourceKey tracking
+Function.cs
+  ├─ [TimerTrigger 0 */15 * * * *, RunOnStartup=false]  — schedule-only, gated by the DiscoverIdentities flag
+  └─ [HttpTrigger]                                       — on-demand single-client / backfill run
+IdentityDiscoveryRunner             — loops active clients → RunDiscovery per client (incremental scan + extraction)
+IdentityExtractionService           — GPT extraction (moved here from the API; depends only on IChatClient)
+IdentityUpsertRepository            — Dapper INSERT into ContactIdentities, race-safe on the unique index
+IdentityDiscoveryStateRepository    — Table Storage LastModified + content hash + sourceKey tracking
 ```
 
-The background service and the existing manual endpoint share the same `RunDiscovery` logic. Source is mapped from blob `sourceType` metadata; there is no blob-path parser.
+Both triggers share the same `IdentityDiscoveryRunner` logic. `IdentitySource` and the `ExtractedIdentity` record move to `AltusAiShared` so the API entity and the Function's extraction service share one definition. Source is mapped from blob `sourceType` metadata; there is no blob-path parser.
 
 **Error handling:** GPT parse failures (malformed JSON, refusal) and read errors are logged and the blob's `LastModified` is NOT recorded, so the next run retries. After a few consecutive failures on the same blob, mark it poison in Table Storage and alert (same pattern as existing sync workers).
 
@@ -213,7 +214,7 @@ The background service and the existing manual endpoint share the same `RunDisco
 
 **Per-file cost.** One GPT-4o call per changed blob. Typical Grain transcript ~3K tokens input + ~500 tokens output ≈ $0.01–0.03 per file at current rates.
 
-**Initial load.** The backfill is a one-time manual endpoint call with an old `modifiedSince` so all existing blobs are processed. 500 blobs × $0.02 ≈ $10 one-time cost.
+**Initial load.** The backfill is a one-time call to the HTTP-triggered function with an old `modifiedSince` so all existing blobs are processed. 500 blobs × $0.02 ≈ $10 one-time cost.
 
 **Steady-state.** Only blobs modified within the window whose `LastModified` advanced are processed. Low frequency after initial load.
 
@@ -224,5 +225,5 @@ The background service and the existing manual endpoint share the same `RunDisco
 ## 10. Open Questions
 
 - **`ContactIdentityEvidence` (SQL) deferred.** The Table Storage per-blob `sourceKey` list covers lightweight provenance for now; add the SQL evidence table + `?includeEvidence` API only if reviewers need richer context snippets.
-- **Timer vs. EventGrid — resolved.** In-API `BackgroundService` on a 15-min timer for v1. Revisit EventGrid only if near-real-time becomes necessary.
+- **Timer vs. EventGrid — resolved.** A `TimerTrigger` in the `AltusAiProcessContent` Function on a 15-min cron for v1. Revisit EventGrid only if near-real-time becomes necessary.
 - **Display label update policy — resolved.** `UpsertObservedIdentity` does not mutate `DisplayLabel` on an existing row (keep first-seen). Reviewers consolidate variants via assignment/merge.

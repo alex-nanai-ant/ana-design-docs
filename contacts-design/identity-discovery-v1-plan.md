@@ -1,4 +1,4 @@
-# Identity Discovery v1 — Incremental Discovery Plan
+# Identity Discovery v1 — `AltusAiProcessContent` Azure Function
 
 Companion to [identity-discovery-design.md](identity-discovery-design.md) and [identity-discovery-v0-plan.md](identity-discovery-v0-plan.md).
 
@@ -6,27 +6,42 @@ Companion to [identity-discovery-design.md](identity-discovery-design.md) and [i
 
 ## Context
 
-v0 ([identity-discovery-v0-plan.md](identity-discovery-v0-plan.md)) is a manually-triggered endpoint that full-scans every Slack/Grain/Email blob each run. Fine at small volume, but it re-pays the GPT cost for unchanged blobs and only runs on demand. v1 makes discovery run automatically and process only blobs that actually changed.
+v0 ([identity-discovery-v0-plan.md](identity-discovery-v0-plan.md)) is a manually-triggered API endpoint (`POST /api/clients/{clientId}/identities/discover`) that full-scans every Slack/Grain/Email blob each run. Fine at small volume, but it re-pays the GPT cost for unchanged blobs and only runs on demand.
 
-The original design ([identity-discovery-design.md](identity-discovery-design.md) §3, §8) proposed a self-contained **Azure Function** with **ETag** change detection and a SQL `ContactIdentityEvidence` table. Investigation of the codebase changed that:
+v1 makes discovery run **automatically**, process **only blobs that actually changed**, and moves it into a **new Azure Function project, `AltusAiProcessContent`** — joining the existing sync-worker family (`AltusAiSlackSync`, `AltusAiMailSync`, `AltusAiConfluenceSync`, `AltusAiTextMergeSkill`). The v0 API endpoint is **removed**; its logic moves into the Function.
 
-- **All identity code already lives in the API project** — `IdentityDiscoveryService`, `IdentityExtractionService`, `ContactsService`, EF `AiAssistantDbContext`. The sync Functions reference only `AltusAiShared` + Dapper and cannot reach that EF code without relocating it.
-- **The API already runs scheduled background work** — `GrainSynchronizer` is a `BackgroundService` on a `PeriodicTimer`, the established in-process scheduled-job pattern, with full scoped/EF access.
+As a Function, it follows the established sync-worker conventions rather than the API's:
+- References **`AltusAiShared` only** — no reference to `AltusAiAssistantApi`, no EF.
+- **Dapper + raw SQL** over `Microsoft.Data.SqlClient` for DB access (client lookup + identity upsert), `SqlConnectionString` from an environment variable — as [AltusAiSlackSync/Function.cs](../../altus-ai-assistant/AltusAiSlackSync/Function.cs) does.
+- Config from **environment variables** (`local.settings.json` locally, App Settings in Azure), not `appsettings.json` / bound `AppSettings`.
+- DI wired manually as singletons in `Program.cs` ([pattern](../../altus-ai-assistant/AltusAiSlackSync/Program.cs)).
 
 ### Decisions
-1. **Hosting:** in-API `BackgroundService` (mirror `GrainSynchronizer`), not a new Azure Function. Maximum reuse, no code relocation.
-2. **Per-blob identity list in Table Storage:** **provenance only** — record blob→identities for idempotency/diagnostics; never auto-remove identities (the reviewer still owns assign/merge/delete).
-3. **Source scope:** Slack / Grain / Email (same as v0). Confluence excluded.
-4. **Change detection:** two-tier. Blob `LastModified` (not ETag) decides whether to *read* a blob; a **SHA256 content hash** decides whether to *re-extract* (the GPT-cost step). A metadata-only write bumps `LastModified` without changing content, so gating GPT on the content hash avoids re-paying extraction cost when only metadata moved.
+1. **Hosting:** new Azure Function `AltusAiProcessContent` — named generically ("process content") so future content-processing functions can join it; identity discovery is its first function.
+2. **DB access:** **Dapper**, matching the sync workers. The v0 `UpsertObservedIdentity` check-then-insert is reimplemented in SQL; the API's EF copy of the discovery path is removed.
+3. **Manual/backfill trigger:** an **HTTP-triggered function in the same project** (like `SlackSync`'s `DeepSyncHttp`), replacing the deleted API endpoint.
+4. **Shared types:** `IdentitySource` (and the `ExtractedIdentity` record) **move to `AltusAiShared`** so the API's `ContactIdentity` entity and the Function's extraction logic reference one definition.
+5. **Per-blob identity list in Table Storage:** **provenance only** — record blob→identities for idempotency/diagnostics; never auto-remove identities (the reviewer still owns assign/merge/delete).
+6. **Source scope:** Slack / Grain / Email (same as v0). Confluence excluded.
+7. **Change detection:** two-tier. Blob `LastModified` (not ETag) decides whether to *read* a blob; a **SHA256 content hash** decides whether to *re-extract* (the GPT-cost step). A metadata-only write bumps `LastModified` without changing content, so gating GPT on the content hash avoids re-paying extraction cost when only metadata moved.
 
 ---
 
-## Implementation (all in `AltusAiAssistantApi`, reusing `AltusAiShared`)
+## Part A — Shared library changes (`AltusAiShared`)
 
-### 1. Blob listing with LastModified
-`BlobStorageService.ListFiles` returns only `(name, metadata)` and has 3 callers (`SlackSyncService`, `AdminService`, `IdentityDiscoveryService`). Add a **new** method beside it to avoid touching the others:
+### A1. Move `IdentitySource` into `AltusAiShared`
+[IdentitySource.cs](../../altus-ai-assistant/AltusAiAssistantApi/Models/Contacts/IdentitySource.cs) currently lives in `AltusAiAssistantApi.Models.Contacts` and carries a `[JsonConverter(typeof(StringEnumConverter))]` attribute. `AltusAiShared` already references `Newtonsoft.Json` 13.0.3, so the attribute moves cleanly.
 
-- [BlobStorageService.cs](../../altus-ai-assistant/AltusAiShared/BlobStorageService.cs): `ListFilesWithProperties(containerName)` → `List<BlobItemInfo>`. Introduce a small **named type** `BlobItemInfo` (class or record, in `AltusAiShared`) rather than a tuple, so callers can grow without breaking the signature:
+- Move the enum to `AltusAiShared` (e.g. namespace `AltusAiShared.Contacts`). Values unchanged: `Unknown, Grain, Slack, Confluence, Email, Phone`.
+- **Namespace fallout in the API:** every reference (`ContactIdentity`, `ContactsService`, the contact DTOs, `ContactIdentityConfiguration`, `IdentityMentionsService`, etc.) needs its `using` updated from `AltusAiAssistantApi.Models.Contacts` to the new shared namespace. Mechanical but repo-wide — a build surfaces every site.
+
+### A2. Move `ExtractedIdentity` into `AltusAiShared`
+The `record ExtractedIdentity(string SourceKey)` (today in [IIdentityExtractionService.cs](../../altus-ai-assistant/AltusAiAssistantApi/Services/IIdentityExtractionService.cs)) moves to `AltusAiShared` alongside `IdentitySource`, since the extraction service moves to the Function (B3).
+
+### A3. `ListFilesWithProperties` on `BlobStorageService`
+`BlobStorageService.ListFiles` returns only `(name, metadata)` and has callers in `SlackSyncService` and `AdminService`. Add a **new** method beside it to avoid touching those:
+
+- [BlobStorageService.cs](../../altus-ai-assistant/AltusAiShared/BlobStorageService.cs): `ListFilesWithProperties(containerName)` → `List<BlobItemInfo>`. Introduce a small **named type** `BlobItemInfo` (in `AltusAiShared`) rather than a tuple, so callers can grow without breaking the signature:
 
   ```csharp
   public class BlobItemInfo
@@ -40,104 +55,154 @@ The original design ([identity-discovery-design.md](identity-discovery-design.md
 
   `GetBlobsAsync(BlobTraits.Metadata)` already exposes `blobItem.Properties.LastModified` (and `.ETag`) — no extra round-trip. Adding `ETag` here later is the cheap hedge noted in the LastModified-vs-ETag discussion.
 
-### 2. Table Storage state (provenance + change detection)
-Reuse [AzureTableClientHelper.InitializeTableClient](../../altus-ai-assistant/AltusAiShared/Confluence/AzureTableClientHelper.cs) (blob account name + key from `AppSettings.BlobAccountName` / `BlobAccessKey`).
+> `ContainerExists`, `GetBlobStream`, and `AzureTableClientHelper.InitializeTableClient` already live in `AltusAiShared` and are usable from the Function as-is.
 
-- New `Services/IdentityDiscoveryStateEntity.cs : ITableEntity`
+---
+
+## Part B — New Function project (`AltusAiProcessContent`)
+
+Scaffold the project to match the existing workers ([AltusAiSlackSync.csproj](../../altus-ai-assistant/AltusAiSlackSync/AltusAiSlackSync.csproj) is the template):
+
+- `Microsoft.NET.Sdk`, `net8.0`, `AzureFunctionsVersion v4`, `OutputType Exe`.
+- Package refs from the SlackSync template (`Microsoft.Azure.Functions.Worker*`, `...Extensions.Http`, `...Extensions.Timer`, `ApplicationInsights.WorkerService`), **plus** the GPT client packages the API uses for `IChatClient`: `Azure.AI.OpenAI`, `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.OpenAI`.
+- `ProjectReference` → `AltusAiShared` only.
+- `host.json`, `local.settings.json` (gitignored secrets), `azure-pipelines.yml`.
+- Add the project to `AltusAiAssistantApi.sln`.
+
+### B1. `Program.cs` — DI wiring
+Mirror [AltusAiSlackSync/Program.cs](../../altus-ai-assistant/AltusAiSlackSync/Program.cs): App Insights worker service, then register as singletons reading from `Environment.GetEnvironmentVariable`:
+
+- `BlobStorageService` — from `BlobAccountName` + `BlobStorageAccountKey` (same construction as SlackSync).
+- `IChatClient` — built the same way the API does ([Program.cs](../../altus-ai-assistant/AltusAiAssistantApi/Program.cs) lines 50–69): `new AzureOpenAIClient(endpoint, ApiKeyCredential(key)).GetChatClient(deployment).AsIChatClient()`, wrapped in a `ChatClientBuilder`. Endpoint/key/deployment come from env vars (e.g. `GptEndpoint`, `GptKey`, `GptDeployment`).
+- `IdentityExtractionService` (B3), `IdentityDiscoveryStateRepository` (B2), `IdentityUpsertRepository` (B4), `IdentityDiscoveryRunner` (B6).
+- `SqlConnectionString` is read per-call inside the repositories (as SlackSync does), not registered.
+
+### B2. Table Storage state (provenance + change detection)
+Use [AzureTableClientHelper.InitializeTableClient](../../altus-ai-assistant/AltusAiShared/Confluence/AzureTableClientHelper.cs) (`BlobAccountName` + `BlobStorageAccountKey` env vars):
+
+- `IdentityDiscoveryStateEntity : ITableEntity`
   - `PartitionKey` = clientId; `RowKey` = `SHA256(blobPath)` hex (blob paths contain `/`, illegal in RowKey)
-  - `BlobPath` (readable), `Source`, `LastModified` (DateTimeOffset, last processed), `ContentHash` (hex SHA256 of the last-extracted content), `SourceKeysJson` (JSON `string[]` = per-blob provenance list), `LastProcessedAt`, `FailureCount`, `LastError?`
-- New `Services/IdentityDiscoveryStateRepository.cs` — `Get(clientId, blobPath)`, `Upsert(entity)`. Table name from a new `AppSettings` value (default `IdentityDiscoveryState`).
+  - `BlobPath` (readable), `Source`, `LastModified` (DateTimeOffset, last processed), `ContentHash` (hex SHA256 of last-extracted content), `SourceKeysJson` (JSON `string[]` = per-blob provenance list), `LastProcessedAt`, `FailureCount`, `LastError?`
+- `IdentityDiscoveryStateRepository` — `Get(clientId, blobPath)`, `Upsert(entity)`. Table name from env var (default `IdentityDiscoveryState`).
 
-### 3. Make `IdentityDiscoveryService` incremental
-Refactor [IdentityDiscoveryService.cs](../../altus-ai-assistant/AltusAiAssistantApi/Services/IdentityDiscoveryService.cs). New signature:
+### B3. `IdentityExtractionService` (moved from the API)
+Move [IdentityExtractionService.cs](../../altus-ai-assistant/AltusAiAssistantApi/Services/IdentityExtractionService.cs) + its interface into the Function project verbatim — it depends only on `IChatClient` (Microsoft.Extensions.AI) and the now-shared `IdentitySource` / `ExtractedIdentity`. The prompt, `SourceNoun`/`SourceHint`, fence-stripping, and JSON parsing are unchanged. **Delete the API's copy** (the API no longer extracts).
+
+### B4. `IdentityUpsertRepository` — Dapper upsert (replaces the EF `UpsertObservedIdentity`)
+Reimplement the v0 check-then-insert ([ContactsService.cs](../../altus-ai-assistant/AltusAiAssistantApi/Services/ContactsService.cs) lines 188–203) in SQL:
 
 ```csharp
-Task<IdentityDiscoveryResultDto> RunDiscovery(int clientId, DateTimeOffset modifiedSince, CancellationToken ct);
+Task<bool> UpsertObservedIdentity(int clientId, IdentitySource source, string sourceKey, CancellationToken ct);
+// returns true when a new row was inserted
 ```
 
-`modifiedSince` is **required** (non-nullable) and acts as a **time-window prefilter** applied *before* any Table Storage work, so old blobs are cheap to ignore. There is no "process everything" magic value — to scan all blobs the caller passes a sufficiently old date (e.g. `2000-01-01`).
-- **Guard the container first:** call `BlobStorageService.ContainerExists(client.UniqueId)` and return an empty result if it's missing — clients without a container (or with no synced sources yet) must not throw a 404 out of `GetBlobsAsync` on every tick. (See also the active-client filtering open item — this is the cheap defensive backstop regardless of how that query is scoped.)
-- Use `ListFilesWithProperties`. Keep existing `.md`/`.html` + `TryMapSource` filtering.
-- **If `blob.LastModified < modifiedSince` → skip immediately** (don't read content, don't even look up Table Storage). Count these as `BlobsOutsideWindow` (or fold into `BlobsSkipped`).
-- Per remaining candidate: load state row. If `state != null && state.LastModified >= blob.LastModified` → **skip unchanged** (new `BlobsUnchanged` counter), no read, no GPT.
-- Otherwise read content and compute `SHA256(content)` (hex). Reading is cheap; the GPT call is the cost we are protecting.
-  - **If `state != null && state.ContentHash == hash`** → content is identical, only `LastModified` advanced (e.g. a metadata patch). **Skip extraction** (no GPT), advance the state row's `LastModified`/`LastProcessedAt`, leave `SourceKeysJson` as-is, and count as `BlobsUnchanged`.
-  - **Else** → extract, `UpsertObservedIdentity` each (unchanged logic), then **write the state row** with new `LastModified` + new `ContentHash` + JSON list of extracted `sourceKey`s + `LastProcessedAt`.
-- On read/extraction failure: log, **do not** update `LastModified` (next tick retries), bump `FailureCount`/`LastError`; skip the blob once `FailureCount` exceeds a small cap (poison guard, design §8). Provenance-only ⇒ never delete identities whose sourceKey disappeared.
-- Optional `bool force` param to ignore state (full re-scan) for the manual endpoint.
+- Insert into `ContactIdentities` with `ContactId = null` (unassigned). Store `Source` as its int enum value.
+- **Populate `BaseEntity` audit columns manually** — EF's audit interceptor did this automatically; Dapper does not. Set `CreatedDate`/`UpdatedDate = UtcNow`, `CreatedBy`/`UpdatedBy` = a system marker (e.g. `"IdentityDiscovery"`). Confirm the exact column set against [ContactIdentityConfiguration.cs](../../altus-ai-assistant/AltusAiAssistantApi/Data/ContactIdentityConfiguration.cs).
+- **Make the upsert race-safe at the DB:** the table has a **unique index on `(ClientId, Source, SourceKey)`**. Use an atomic `INSERT ... WHERE NOT EXISTS (...)` (or `MERGE`) and report "created" from rows-affected, and/or catch SQL error 2601/2627 and treat as not-created. This is safer than the EF check-then-insert v0 shipped, which had no catch (see open items).
 
-### 4. Result DTO
-[IdentityDiscoveryResultDto.cs](../../altus-ai-assistant/AltusAiAssistantApi/Models/Contacts/IdentityDiscoveryResultDto.cs): add `int BlobsUnchanged` (and `int BlobsOutsideWindow` if tracked separately from `BlobsSkipped`).
+### B5. Client lookup (Dapper)
+Active clients to scan: `SELECT Id, UniqueId FROM Clients WHERE InactiveDate IS NULL` (mirrors the SlackSync active filter). The HTTP trigger's single-client lookup filters by `UniqueId`.
 
-### 5. Scheduled runner + manual trigger
-Split the **schedule** from the **work** so the same logic serves both the timer and the endpoint:
+### B6. `IdentityDiscoveryRunner` — the shared work, made incremental
+The per-client scan, ported from [IdentityDiscoveryService.cs](../../altus-ai-assistant/AltusAiAssistantApi/Services/IdentityDiscoveryService.cs) and upgraded to incremental. Both triggers call it.
 
-- New `IdentityDiscoveryRunner` (scoped service) with `RunAllClients(DateTimeOffset modifiedSince, ct)` — loads active clients from `AiAssistantDbContext` and loops them, calling `IdentityDiscoveryService.RunDiscovery(clientId, modifiedSince, ct)` in a per-client try/catch so one client's failure doesn't abort the run. This is the shared entry point.
-- New `IdentityDiscoveryBackgroundService.cs : BackgroundService`, modeled on [GrainSynchronizer.cs](../../altus-ai-assistant/AltusAiAssistantApi/GrainSynchronizer.cs) but **schedule-only — no run on startup**:
-  - `PeriodicTimer(TimeSpan.FromMinutes(15))`, loop on `await timer.WaitForNextTickAsync(ct)` so the **first** execution is one interval after boot (drop GrainSynchronizer's initial pre-loop `RunSync` call).
-  - Gate on `appSettings.DiscoverIdentities` (early return when false), same as `SyncGrain`.
-  - Per tick: `CreateScope()` → resolve `IdentityDiscoveryRunner` → `RunAllClients(DateTimeOffset.UtcNow.AddDays(-appSettings.DiscoveryLookbackDays), ct)`. Default `DiscoveryLookbackDays = 3`, so the scheduled job only considers blobs modified in the **last 3 days**.
-- The schedule gate (`DiscoverIdentities`) only disables the **timer**; the manual endpoint stays callable regardless, so discovery can be triggered on demand even when the schedule is off.
+```csharp
+Task<IdentityDiscoveryResultDto> RunDiscovery(int clientId, string clientUniqueId, DateTimeOffset modifiedSince, bool force, CancellationToken ct);
+Task RunAllClients(DateTimeOffset modifiedSince, CancellationToken ct); // loops B5 clients, per-client try/catch
+```
 
-### 6. Wiring
-- [AppSettings.cs](../../altus-ai-assistant/AltusAiAssistantApi/AppSettings.cs): add `bool DiscoverIdentities`, `string IdentityDiscoveryStateTable`, and `int DiscoveryLookbackDays` (default `3`).
-- [Program.cs](../../altus-ai-assistant/AltusAiAssistantApi/Program.cs): register `IdentityDiscoveryStateRepository` and `AddHostedService<IdentityDiscoveryBackgroundService>()` next to the existing `AddHostedService<GrainSynchronizer>()`. `BlobStorageService` + `IIdentityDiscoveryService` are already registered.
-- `appsettings*.json`: add `"DiscoverIdentities": false` to Development/QA, `true` where desired in prod (mirror `SyncGrain` defaults).
-- Manual `POST /api/clients/{clientId}/identities/discover` endpoint stays — the **on-demand trigger** for a single client, runs the same incremental `RunDiscovery`, and works independently of the schedule flag. Query params:
-  - **`modifiedSince=<ISO date>` (required)** — same window prefilter as the service. Pass an old date (e.g. `2000-01-01`) for the initial full backfill.
-  - **`forceUnchanged=true` (optional, default false)** — also bypass the per-blob Table Storage comparison, re-extracting even blobs whose `LastModified` is unchanged (maps to the service's `force` behavior).
+`modifiedSince` is **required** and acts as a **time-window prefilter** *before* any Table Storage work, so old blobs are cheap to ignore. No "process everything" magic value — to scan all blobs, pass a sufficiently old date (e.g. `2000-01-01`).
 
-### 7. Logging & observability
-Logging reuses the existing **Serilog → Application Insights (traces)** sink ([Program.cs](../../altus-ai-assistant/AltusAiAssistantApi/Program.cs)); every class uses `ILogger<T>`, so `customDimensions.SourceContext` (the class name) is already filterable. A `BackgroundService` produces **no HTTP request**, so these land in `traces`, not `requests` — there's no `operation_Name` to filter on; use a logging scope instead.
+- **Guard the container first:** `BlobStorageService.ContainerExists(clientUniqueId)` → empty result if missing, so clients with no synced sources don't throw a 404 out of `GetBlobsAsync`.
+- Use `ListFilesWithProperties`. Keep the `.md`/`.html` + `TryMapSource` filtering (the `sourceType` metadata → `IdentitySource` map ported from the API service).
+- **If `blob.LastModified < modifiedSince` → skip immediately** (no read, no Table lookup). Count as `BlobsOutsideWindow` (or fold into `BlobsSkipped`).
+- Per remaining candidate: load state row. If `!force && state != null && state.LastModified >= blob.LastModified` → **skip unchanged** (`BlobsUnchanged`), no read, no GPT.
+- Otherwise read content, compute `SHA256(content)` (hex). Reading is cheap; GPT is the cost we protect.
+  - **If `!force && state != null && state.ContentHash == hash`** → content identical, only `LastModified` advanced (metadata patch). **Skip extraction**, advance the state row's `LastModified`/`LastProcessedAt`, leave `SourceKeysJson` as-is, count as `BlobsUnchanged`.
+  - **Else** → extract, `UpsertObservedIdentity` each (Dapper, B4), then **write the state row** with new `LastModified` + `ContentHash` + JSON list of extracted `sourceKey`s + `LastProcessedAt`.
+- On read/extraction failure: log, **do not** advance `LastModified` (next tick retries), bump `FailureCount`/`LastError`; skip once `FailureCount` exceeds a small cap (poison guard, design §8). Provenance-only ⇒ never delete identities whose sourceKey disappeared.
+- `force` bypasses both the per-blob `LastModified` and `ContentHash` comparisons (full re-extract) — used by the HTTP trigger's `forceUnchanged=true`.
 
-- **Tag each run with a scope** at the two shared entry points (`IdentityDiscoveryRunner.RunAllClients` for scheduled, the endpoint for manual). Serilog promotes scope properties to `customDimensions`, and all child logs (per-client, per-blob) inherit them:
+### B7. Result DTO
+Move [IdentityDiscoveryResultDto.cs](../../altus-ai-assistant/AltusAiAssistantApi/Models/Contacts/IdentityDiscoveryResultDto.cs) into the Function (or `AltusAiShared`), and add `int BlobsUnchanged` (and `int BlobsOutsideWindow` if tracked separately from `BlobsSkipped`).
 
-  ```csharp
-  using (_logger.BeginScope(new Dictionary<string, object>
-  {
-      ["Job"] = "IdentityDiscovery",
-      ["Trigger"] = "Scheduled",   // endpoint passes "Manual"
-      ["JobRunId"] = Guid.NewGuid(),
-  }))
-  { /* run */ }
-  ```
+### B8. Function triggers (`Function.cs`)
+Two functions in the project, both delegating to `IdentityDiscoveryRunner`:
 
-- **Log lines:** one Information **start** line and one Information **summary** line per client run (clientId + the `IdentityDiscoveryResultDto` counts); per-blob read/extraction failures at Warning; poison-skip at Warning/Error.
-- **App Insights queries** (Logs / KQL on the `traces` table):
+- **`[Function("IdentityDiscovery")]` — TimerTrigger.** `[TimerTrigger("0 */15 * * * *")]` (every 15 min), **`RunOnStartup = false`** so it does **not** fire at boot — the schedule-only requirement, native to Functions timers (unlike the SlackSync incremental, which uses `RunOnStartup = true`). Per tick: `RunAllClients(DateTimeOffset.UtcNow.AddDays(-DiscoveryLookbackDays), ct)`. Default `DiscoveryLookbackDays = 3`. Gate on a `DiscoverIdentities` env flag (early return when false) — this disables **only the timer**.
+- **`[Function("IdentityDiscoveryHttp")]` — HttpTrigger** (`AuthorizationLevel.Function`, GET), replacing the deleted API endpoint. The on-demand / backfill trigger for a single client. Query params:
+  - **`clientUniqueId` (required)** — which client to scan (resolve `Id` via B5).
+  - **`modifiedSince=<ISO date>` (required)** — same window prefilter. Pass an old date (e.g. `2000-01-01`) for the initial full backfill.
+  - **`forceUnchanged=true` (optional, default false)** — also bypass the per-blob Table Storage comparison, re-extracting even unchanged blobs (the runner's `force`).
+  - Runs regardless of the `DiscoverIdentities` flag, so discovery is triggerable even when the schedule is off.
 
-  ```kql
-  // Scheduled job only
-  traces
-  | where customDimensions.Job == "IdentityDiscovery" and customDimensions.Trigger == "Scheduled"
-  | order by timestamp asc
+### B9. Configuration (env vars / App Settings)
+No `appsettings.json` binding — Functions read env vars (`local.settings.json` `Values` locally; App Settings in Azure). Required:
+`BlobAccountName`, `BlobStorageAccountKey`, `SqlConnectionString`, `GptEndpoint`, `GptKey`, `GptDeployment`, `IdentityDiscoveryStateTable` (default `IdentityDiscoveryState`), `DiscoveryLookbackDays` (default `3`), `DiscoverIdentities` (`true`/`false`), plus `AzureWebJobsStorage` / `APPLICATIONINSIGHTS_CONNECTION_STRING` per the worker template.
 
-  // One run, end to end
-  traces | where customDimensions.JobRunId == "<guid>" | order by timestamp asc
+---
 
-  // Summary lines only
-  traces | where customDimensions.Job == "IdentityDiscovery" and message startswith "Identity discovery complete"
-  ```
+## Part C — API cleanup (`AltusAiAssistantApi`)
+
+Discovery no longer runs in the API; remove the now-dead code:
+
+- **Delete the endpoint** — the `DiscoverIdentities` action in [ContactsController.cs](../../altus-ai-assistant/AltusAiAssistantApi/Controllers/ContactsController.cs) (lines 124–129) and the `IIdentityDiscoveryService` constructor dependency (lines 14, 20, 25).
+- **Delete** `IIdentityDiscoveryService` / `IdentityDiscoveryService` and `IIdentityExtractionService` / `IdentityExtractionService` from the API, and their `AddScoped` registrations in `Program.cs`.
+- **`ContactsService.UpsertObservedIdentity`** is now unused by the API (the Function owns discovery writes). Remove it for leanness, or leave it as harmless documentation — see open items.
+- **Keep** everything else in the contacts review surface (`ContactIdentity` entity, `GET /identities?unassigned=true`, assignment) — only the *discovery* path leaves the API.
+- `IdentityDiscoveryResultDto` moved out (B7); fix/remove its API references.
+
+> The `ContactIdentity` entity, its EF config, and the unique index stay in the API — the SQL table is shared between the API (reads/review) and the Function (Dapper writes). No migration is needed; the Function writes the same table the API already owns.
 
 ---
 
 ## Verification
-1. `dotnet build AltusAiAssistantApi.sln` — no errors.
+1. `dotnet build AltusAiAssistantApi.sln` — no errors (API cleanup + shared move + new project all compile).
 2. `dotnet test tests/AltusAiShared.Tests/AltusAiShared.Tests.csproj` — existing tests pass.
-3. Set `DiscoverIdentities: true` locally, run the API. Confirm the background service does **not** run at startup, and fires for the first time ~15 min later. With the flag `false`, confirm the timer never runs but `POST .../identities/discover` still works on demand.
-4. First run: unassigned identities appear via `GET /api/clients/{clientId}/identities?unassigned=true`; a state row per processed blob exists in `IdentityDiscoveryState` with populated `SourceKeysJson`.
-5. Second run, no blob changes: `BlobsUnchanged` = candidate count, `IdentitiesCreated` = 0, no GPT calls.
-6. **Changed content:** re-upload one blob with edited content (bumps `LastModified`, changes the hash): only that blob re-extracts next tick; its state row's `LastModified`, `ContentHash`, and `SourceKeysJson` update.
-6a. **Metadata-only change:** patch a blob's metadata without touching content (bumps `LastModified`, hash unchanged): next tick reads it but makes **no GPT call**; the state row's `LastModified` advances while `ContentHash`/`SourceKeysJson` stay the same. Counts as `BlobsUnchanged`.
-7. **Window:** a blob older than 3 days that was never processed is ignored by the scheduled run (no Table Storage lookup, no GPT). Calling the endpoint with `?modifiedSince=2000-01-01` picks it up — confirm the initial full backfill works this way.
-8. **Logging:** locally (console sink) confirm each run emits start + summary lines carrying `Job`/`Trigger`/`JobRunId`; in App Insights confirm `traces | where customDimensions.Trigger == "Scheduled"` returns only timer runs and excludes endpoint-triggered ones.
+3. `cd AltusAiProcessContent && func start` with `DiscoverIdentities=false`: confirm the timer does **not** fire at startup and is gated off, but the **HTTP trigger still works** on demand.
+4. Set `DiscoverIdentities=true`: confirm the timer fires on the 15-min boundary (not at boot) and runs `RunAllClients`.
+5. **Backfill:** call the HTTP trigger with `?clientUniqueId=<id>&modifiedSince=2000-01-01`. Unassigned identities appear via `GET /api/clients/{clientId}/identities?unassigned=true`; a state row per processed blob exists in `IdentityDiscoveryState` with populated `SourceKeysJson`.
+6. **Second run, no blob changes:** `BlobsUnchanged` = candidate count, `IdentitiesCreated` = 0, no GPT calls.
+7. **Changed content:** re-upload one blob with edited content: only that blob re-extracts; its state row's `LastModified`, `ContentHash`, `SourceKeysJson` update.
+8. **Metadata-only change:** patch a blob's metadata without touching content: next run reads it but makes **no GPT call**; state row's `LastModified` advances while `ContentHash`/`SourceKeysJson` stay; counts as `BlobsUnchanged`.
+9. **Window:** a blob older than 3 days, never processed, is ignored by the timer run; the HTTP trigger with `modifiedSince=2000-01-01` picks it up.
+10. **Upsert race:** confirm the Dapper insert is idempotent under the unique index — a concurrent timer tick + backfill for the same client does not throw on `(ClientId, Source, SourceKey)`.
+11. **Logging:** App Insights `traces` carry the per-run scope (`Job`/`Trigger`/`JobRunId`); `Trigger == "Scheduled"` excludes HTTP-triggered runs.
+
+---
+
+## Logging & observability
+Functions log via `ILogger<T>` into the App Insights worker service already wired by the template — these land in `traces` (a `TimerTrigger` produces no HTTP request; the `HttpTrigger` does). Tag each run with a scope at the runner entry so child logs inherit it:
+
+```csharp
+using (_logger.BeginScope(new Dictionary<string, object>
+{
+    ["Job"] = "IdentityDiscovery",
+    ["Trigger"] = "Scheduled",   // HTTP trigger passes "Manual"
+    ["JobRunId"] = Guid.NewGuid(),
+}))
+{ /* run */ }
+```
+
+- One Information **start** line and one Information **summary** line per client run (clientId + `IdentityDiscoveryResultDto` counts); per-blob read/extraction failures at Warning; poison-skip at Warning/Error.
+- KQL (on `traces`):
+  ```kql
+  // Scheduled job only
+  traces | where customDimensions.Trigger == "Scheduled" | order by timestamp asc
+  // One run, end to end
+  traces | where customDimensions.JobRunId == "<guid>" | order by timestamp asc
+  ```
 
 ---
 
 ## Open items to refine
-- **Concurrent runs vs. the `(ClientId, Source, SourceKey)` unique index** *(known issue — to be resolved separately, not in this plan)*. `UpsertObservedIdentity` is a check-then-insert with no catch ([ContactsService.cs](../../altus-ai-assistant/AltusAiAssistantApi/Services/ContactsService.cs)), but `ContactIdentity` has a **unique index** on `(ClientId, Source, SourceKey)` ([ContactIdentityConfiguration.cs](../../altus-ai-assistant/AltusAiAssistantApi/Data/ContactIdentityConfiguration.cs)). v1 introduces a realistic overlap — a long manual backfill (`modifiedSince=2000-01-01`) running while a 15-min timer tick fires for the same client — where two runs extract the same person, both miss the existing-row check, and the second `SaveChanges` throws on the constraint. Two concurrent runs also last-write-wins on the same Table Storage state row. Not addressed here; resolution (per-client single-flight lock, and/or catching `DbUpdateException` + re-query in `UpsertObservedIdentity`) is tracked separately.
-- **Active-client query** — confirm the exact source of "clients to scan" (all `Clients` with `InactiveDate IS NULL`, or only those with relevant blob containers). Independent of this, `RunDiscovery` already guards with `ContainerExists` (§3) so a container-less client is a cheap no-op rather than a per-tick 404.
-- **Interval** — 15 min fixed vs. configurable (`appsettings`). Decided: **no run-on-startup**; first run is one interval after boot. If a clock-aligned schedule (e.g. on the quarter-hour) is wanted instead of a boot-relative interval, that needs a cron mechanism rather than `PeriodicTimer`.
-- **Poison cap** — value for `FailureCount` max and whether to surface an alert (design §8 mentions alerting).
-- **`force` full-rescan** — keep as query param on the manual endpoint, or omit for now.
-- **Window param shape** — `modifiedSince=<date>` (chosen, required, matches "any modification date") vs. a `lookbackDays=N` int (closer to the existing `lookbackHours` param on `SlackSync` `DeepSyncHttp`).
-- **Provenance reads** — whether any UI/endpoint will surface `SourceKeysJson`, or it stays internal for now.
+- **Upsert race vs. the `(ClientId, Source, SourceKey)` unique index** — addressed by B4: the Dapper upsert is made atomic at the DB (`INSERT ... WHERE NOT EXISTS` / `MERGE`, or catch 2601/2627). Two concurrent runs still last-write-wins on the same Table Storage state row (benign — provenance only). A per-client single-flight lock remains optional.
+- **Active-client query** — confirmed shape: `Clients WHERE InactiveDate IS NULL`. Independent of this, `RunDiscovery` guards with `ContainerExists` so a container-less client is a cheap no-op.
+- **Keep `ContactsService.UpsertObservedIdentity` in the API?** — now unused by the API. Remove for leanness, or leave as harmless dead code. (Lean toward remove.)
+- **GPT config in the Function** — single `GptEndpoint`/`GptKey`/`GptDeployment` env trio vs. mirroring the API's multi-deployment `GptDeployments` map. Single deployment is simpler for a worker; revisit if load-balancing across deployments matters.
+- **`IdentitySource` namespace** — proposed `AltusAiShared.Contacts`; confirm before the repo-wide `using` sweep.
+- **Where the Function-local types live** (`IdentityDiscoveryStateEntity/Repository`, `IdentityDiscoveryResultDto`, extraction service) — in `AltusAiProcessContent` vs. `AltusAiShared`. Default to the Function project unless another worker will need them.
+- **Interval / cron** — 15-min `TimerTrigger` cron (`0 */15 * * * *`). A clock-aligned cron is native to Functions timers, so no boot-relative drift.
+- **Poison cap** — value for `FailureCount` max and whether to surface an alert (design §8).
+- **Provenance reads** — whether any UI/endpoint surfaces `SourceKeysJson`, or it stays internal.
+- **Deploy pipeline** — new `azure-pipelines.yml` for `AltusAiProcessContent` modeled on [AltusAiSlackSync/azure-pipelines.yml](../../altus-ai-assistant/AltusAiSlackSync/azure-pipelines.yml); a new Function App resource + App Settings to provision.
