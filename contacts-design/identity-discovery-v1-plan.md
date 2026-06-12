@@ -129,16 +129,16 @@ Move [IdentityDiscoveryResultDto.cs](../../altus-ai-assistant/AltusAiAssistantAp
 ### B8. Function triggers (`Function.cs`)
 Two functions in the project, both delegating to `IdentityDiscoveryRunner`:
 
-- **`[Function("IdentityDiscovery")]` — TimerTrigger.** `[TimerTrigger("0 */15 * * * *")]` (every 15 min), **`RunOnStartup = false`** so it does **not** fire at boot — the schedule-only requirement, native to Functions timers (unlike the SlackSync incremental, which uses `RunOnStartup = true`). Per tick: `RunAllClients(DateTimeOffset.UtcNow.AddDays(-DiscoveryLookbackDays), ct)`. Default `DiscoveryLookbackDays = 3`. Gate on a `DiscoverIdentities` env flag (early return when false) — this disables **only the timer**.
+- **`[Function("IdentityDiscovery")]` — TimerTrigger.** `[TimerTrigger("0 */15 * * * *")]` (every 15 min), **`RunOnStartup = false`** so it does **not** fire at boot — the schedule-only requirement, native to Functions timers (unlike the SlackSync incremental, which uses `RunOnStartup = true`). Per tick: `RunAllClients(DateTimeOffset.UtcNow.AddDays(-DiscoveryLookbackDays), ct)`. Default `DiscoveryLookbackDays = 3`. No custom enable flag — to turn the schedule off, set the Azure app setting **`AzureWebJobs.IdentityDiscovery.Disabled = true`**, which disables **only this timer** and leaves the HTTP function callable.
 - **`[Function("IdentityDiscoveryHttp")]` — HttpTrigger** (`AuthorizationLevel.Function`, GET), replacing the deleted API endpoint. The on-demand / backfill trigger for a single client. Query params:
   - **`clientUniqueId` (required)** — which client to scan (resolve `Id` via B5).
   - **`modifiedSince=<ISO date>` (required)** — same window prefilter. Pass an old date (e.g. `2000-01-01`) for the initial full backfill.
   - **`forceUnchanged=true` (optional, default false)** — also bypass the per-blob Table Storage comparison, re-extracting even unchanged blobs (the runner's `force`).
-  - Runs regardless of the `DiscoverIdentities` flag, so discovery is triggerable even when the schedule is off.
+  - A separate function from the timer, so it stays callable even when the schedule is disabled via `AzureWebJobs.IdentityDiscovery.Disabled`.
 
 ### B9. Configuration (env vars / App Settings)
 No `appsettings.json` binding — Functions read env vars (`local.settings.json` `Values` locally; App Settings in Azure). Required:
-`BlobAccountName`, `BlobStorageAccountKey`, `SqlConnectionString`, `GptEndpoint`, `GptKey`, `GptDeployment`, `IdentityDiscoveryStateTable` (default `IdentityDiscoveryState`), `DiscoveryLookbackDays` (default `3`), `DiscoverIdentities` (`true`/`false`), plus `AzureWebJobsStorage` / `APPLICATIONINSIGHTS_CONNECTION_STRING` per the worker template.
+`BlobAccountName`, `BlobStorageAccountKey`, `SqlConnectionString`, `GptEndpoint`, `GptKey`, `GptDeployment`, `IdentityDiscoveryStateTable` (default `IdentityDiscoveryState`), `DiscoveryLookbackDays` (default `3`), plus `AzureWebJobsStorage` / `APPLICATIONINSIGHTS_CONNECTION_STRING` per the worker template. The timer is turned off (when desired) via the `AzureWebJobs.IdentityDiscovery.Disabled` app setting, not a custom flag.
 
 ---
 
@@ -159,38 +159,28 @@ Discovery no longer runs in the API; remove the now-dead code:
 ## Verification
 1. `dotnet build AltusAiAssistantApi.sln` — no errors (API cleanup + shared move + new project all compile).
 2. `dotnet test tests/AltusAiShared.Tests/AltusAiShared.Tests.csproj` — existing tests pass.
-3. `cd AltusAiProcessContent && func start` with `DiscoverIdentities=false`: confirm the timer does **not** fire at startup and is gated off, but the **HTTP trigger still works** on demand.
-4. Set `DiscoverIdentities=true`: confirm the timer fires on the 15-min boundary (not at boot) and runs `RunAllClients`.
+3. `cd AltusAiProcessContent && func start`: confirm the timer does **not** fire at startup (`RunOnStartup = false`) and fires on the next 15-min boundary, running `RunAllClients`; the HTTP trigger works on demand.
+4. Set `AzureWebJobs.IdentityDiscovery.Disabled=true`: confirm the timer never fires, but `IdentityDiscoveryHttp` still works on demand.
 5. **Backfill:** call the HTTP trigger with `?clientUniqueId=<id>&modifiedSince=2000-01-01`. Unassigned identities appear via `GET /api/clients/{clientId}/identities?unassigned=true`; a state row per processed blob exists in `IdentityDiscoveryState` with populated `SourceKeysJson`.
 6. **Second run, no blob changes:** `BlobsUnchanged` = candidate count, `IdentitiesCreated` = 0, no GPT calls.
 7. **Changed content:** re-upload one blob with edited content: only that blob re-extracts; its state row's `LastModified`, `ContentHash`, `SourceKeysJson` update.
 8. **Metadata-only change:** patch a blob's metadata without touching content: next run reads it but makes **no GPT call**; state row's `LastModified` advances while `ContentHash`/`SourceKeysJson` stay; counts as `BlobsUnchanged`.
 9. **Window:** a blob older than 3 days, never processed, is ignored by the timer run; the HTTP trigger with `modifiedSince=2000-01-01` picks it up.
 10. **Upsert race:** confirm the Dapper insert is idempotent under the unique index — a concurrent timer tick + backfill for the same client does not throw on `(ClientId, Source, SourceKey)`.
-11. **Logging:** App Insights `traces` carry the per-run scope (`Job`/`Trigger`/`JobRunId`); `Trigger == "Scheduled"` excludes HTTP-triggered runs.
+11. **Logging:** App Insights `traces` from one run share an `operation_Id` (the Functions invocation id) and carry `operation_Name`; filtering `operation_Name == "IdentityDiscovery"` returns scheduled runs only (manual runs are `IdentityDiscoveryHttp`).
 
 ---
 
 ## Logging & observability
-Functions log via `ILogger<T>` into the App Insights worker service already wired by the template — these land in `traces` (a `TimerTrigger` produces no HTTP request; the `HttpTrigger` does). Tag each run with a scope at the runner entry so child logs inherit it:
-
-```csharp
-using (_logger.BeginScope(new Dictionary<string, object>
-{
-    ["Job"] = "IdentityDiscovery",
-    ["Trigger"] = "Scheduled",   // HTTP trigger passes "Manual"
-    ["JobRunId"] = Guid.NewGuid(),
-}))
-{ /* run */ }
-```
+Functions log via `ILogger<T>` into the App Insights worker service already wired by the template — these land in `traces` (a `TimerTrigger` produces no HTTP request; the `HttpTrigger` does). No custom logging scope is needed: the Functions host already wraps each invocation in a scope carrying the **function name** (`operation_Name`) and a unique **invocation id** (`operation_Id`), so all logs from one run are correlated, and scheduled vs manual is just the function name (`IdentityDiscovery` vs `IdentityDiscoveryHttp`).
 
 - One Information **start** line and one Information **summary** line per client run (clientId + `IdentityDiscoveryResultDto` counts); per-blob read/extraction failures at Warning; poison-skip at Warning/Error.
-- KQL (on `traces`):
+- KQL (on `traces`), using the native fields:
   ```kql
   // Scheduled job only
-  traces | where customDimensions.Trigger == "Scheduled" | order by timestamp asc
+  traces | where operation_Name == "IdentityDiscovery" | order by timestamp asc
   // One run, end to end
-  traces | where customDimensions.JobRunId == "<guid>" | order by timestamp asc
+  traces | where operation_Id == "<invocation-id>" | order by timestamp asc
   ```
 
 ---

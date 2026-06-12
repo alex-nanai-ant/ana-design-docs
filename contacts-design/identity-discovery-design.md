@@ -196,7 +196,7 @@ Discovery runs in a dedicated Azure Function, `AltusAiProcessContent` (its first
 
 ```
 Function.cs
-  ├─ [TimerTrigger 0 */15 * * * *, RunOnStartup=false]  — schedule-only, gated by the DiscoverIdentities flag
+  ├─ [TimerTrigger 0 */15 * * * *, RunOnStartup=false]  — schedule-only; disable via AzureWebJobs.IdentityDiscovery.Disabled
   └─ [HttpTrigger]                                       — on-demand single-client / backfill run
 IdentityDiscoveryRunner             — loops active clients → RunDiscovery per client (incremental scan + extraction)
 IdentityExtractionService           — GPT extraction (moved here from the API; depends only on IChatClient)
