@@ -8,21 +8,17 @@ This document describes the changes on the `feat/mcp` branch, how to land them c
 
 ---
 
-## 0. Git situation (this reframes "migrate")
+## 0. Git situation
 
-`feat/mcp` is **not behind `main`** — it already contains all of `main`:
+`feat/mcp` already contains all of `main`. The MAF refactor (`91c497b ANA-123 Refactor complete chat. Add MAF for agentic. Feature toggled.`) landed on `main` and was pulled into the branch via `b5adfbd "Merge branch 'main' into feat/mcp"`. **The MCP code and the MAF flow (`Services/Maf/`, `CompleteChatService`) already coexist in `feat/mcp`**, and the merge resolved cleanly — no conflict markers remain in tracked source.
 
-- The MAF refactor landed on `main` (`91c497b ANA-123 Refactor complete chat. Add MAF for agentic. Feature toggled.`, an ancestor of `main` HEAD `7065111`).
-- `feat/mcp` developed the MCP work in parallel and repeatedly merged `main` in; the most recent merge `b5adfbd "Merge branch 'main' into feat/mcp"` pulled the MAF refactor into the branch.
-- Result: **the MCP code and the MAF flow (`Services/Maf/`, `CompleteChatService`) already coexist in `feat/mcp`**, and the merge resolved cleanly — no conflict markers remain in tracked source.
+**"Migrate MCP onto MAF" means re-pointing couplings, not re-merging.** The MCP code was authored against the pre-MAF `ChatService` and still binds to the legacy completion/retrieval surface that the MAF plan removes in Phase 4. The migration work is to re-point those bindings at the MAF abstractions before the legacy code is deleted.
 
-Leftover merge artifacts to delete (untracked working-tree noise):
+Untracked working-tree artifacts to clean up before merging:
 
 - `AltusAiAssistantApi/Program.cs.orig`
 - `AltusAiAssistantApi/appsettings.QA.json.orig`
 - `.vscode/`
-
-**Therefore "migrate MCP on top of MAF" does not mean re-merging.** It means: the MCP code was authored against the *pre-MAF* `ChatService`, and after the merge it still binds to the **legacy completion/retrieval surface that the MAF plan deletes in Phase 4**. The migration work is to re-point those couplings at the MAF abstractions before the legacy code is removed.
 
 ---
 
