@@ -1,51 +1,42 @@
-# ANDI → Ana MCP: Authentication & Authorization
+# Ana MCP: User-Issued, Client-Scoped Access Tokens (for ANDI & other third-party integrations)
 
-> **Scope:** how **ANDI** (a separate AI workshop-facilitation app, its own FE + BE) authenticates to Ana's `/mcp` endpoint, and how each workshop is bound to a **single Altus client** by a token **Ana itself issues**.
-> **Companion docs:** [mcp-claude-oauth-entra.md](mcp-claude-oauth-entra.md) (the per-user delegated flow Claude uses) and [entra-app-registrations.md](entra-app-registrations.md) (the registrations that front `/mcp`).
-> **Status:** design / proposal. Nothing below is built yet; it describes the intended shape and the concrete changes Ana needs.
+> **Scope:** how a third-party application — **ANDI** (a separate AI workshop-facilitation app) or any future integration — gets a credential to call Ana's `/mcp` endpoint, bound to a **specific set of Altus clients** chosen at issuance (often just one, but not limited to one), **without any Entra setup of its own**. An Ana user who already has access to those clients generates the token from the Ana UI and hands it to the consuming application.
+> **Companion docs:** [mcp-claude-oauth-entra.md](mcp-claude-oauth-entra.md) (the per-user delegated flow Claude uses — token issuance below reuses this same user identity) and [entra-app-registrations.md](entra-app-registrations.md) (the registrations that front `/mcp`; this design adds none).
+> **Status:** design / proposal. Supersedes an earlier draft where ANDI's backend minted its own tokens via a dedicated Entra app registration — that approach is kept below only as a rejected alternative (§9). Nothing below is built yet.
 
 ---
 
-## 1. The core tension — ANDI is not Claude
+## 1. The core idea
 
-Ana's MCP endpoint today serves **one** access pattern: an interactive human, signed in through Claude, holding a **delegated** token whose client-scoping is derived **server-side from that user's `UserClient` assignments**.
+ANDI's workshop AI runs autonomously in ANDI's backend — no human in the loop at query time — and needs to touch a bounded set of Altus clients per workshop, never more than it's explicitly granted. Usually that's a single client, but the mechanism shouldn't have to be redesigned the day a workshop (or another integration) legitimately spans a handful of clients. The earlier draft solved single-client scoping by having ANDI's backend mint its own scoped token via a new Entra app registration and an admin-provisioned allow-list. That works, but it means **every new third-party integration needs its own Entra app registration, app role grant, and allow-list rows** before it can receive a single token.
 
-ANDI breaks every assumption in that sentence:
+Simpler framing: **the client-scoping decision doesn't need a new authorization mechanism — Ana already has one.** Every Ana user who can see a client's data interactively already has a `UserClient` row saying so. If that same user generates the token, through the Ana UI, using the session they already have, then:
 
-| Assumption in the Claude flow | Reality for ANDI |
-|---|---|
-| A **human** drives each call, interactively | The **workshop AI runs autonomously** in ANDI's backend — no human in the loop at query time |
-| The caller is an **Ana user** with `UserClient` rows | Workshop participants are **not Ana users**; they have no `UserClient` assignments |
-| Scoping is **user → client** | Scoping is **workshop → client** — a domain concept Ana has never heard of |
-| Token carries `scp = Mcp.invoke` (delegated) | ANDI has no user token at all |
+- Issuance is authorized by something that already exists (`UserClient`) — no new allow-list to provision or maintain.
+- The consuming application (ANDI, or anyone else) never touches Entra at all. It receives an opaque bearer string and uses it like an API key.
+- Onboarding a new third-party integration is a UI action, not an Entra admin-consent workflow.
 
-**Decisions taken:**
-
-1. **Same tenant.** ANDI's backend lives in the Altus Nova Entra tenant (`e99365e9-…`); its own workshop participants authenticate to ANDI and never reach Ana.
-2. **App-only.** ANDI's backend acts on its **own service identity** — no user identity flows to Ana.
-3. **Ana enforces hard isolation, per workshop, via a token Ana issues.** For each workshop, ANDI asks Ana to **mint a workshop token bound to exactly one Altus client**. That token is what the workshop AI uses to call `/mcp`. Because the client is baked into the token **at mint time by Ana**, the workshop AI **cannot** reach any other client — there is no `clientId` for it to tamper with.
-
-That third decision is the heart of this document. It is stronger than "ANDI passes a `clientId` and Ana checks it against an allow-list": here the workshop-runtime credential **has no ability to name a client at all**. The client is a property of the token, set by Ana.
+The data-plane guarantee is unchanged from the original design: **the token itself is the client binding.** Whoever holds it cannot express access to a client outside the set baked into it — a `clientId` parameter, if present, is checked for membership in that set, not treated as free-form input.
 
 ---
 
 ## 2. The two layers
 
-The design splits into a privileged **control plane** and a scoped **data plane**:
-
 ```
-        CONTROL PLANE (mint, rare, privileged)          DATA PLANE (invoke, frequent, scoped)
-        ─────────────────────────────────────           ────────────────────────────────────
-ANDI backend ──Entra app token (WorkshopToken.Mint)──▶  workshop AI ──Ana workshop token──▶ /mcp
-             "mint a token for clientId=X"                          bound to exactly clientId=X
-             Ana checks X ∈ AppClient(ANDI)                         Ana pins clientId from the token
-             Ana returns ana_ws_… (single-use record)              no clientId parameter is trusted
+        CONTROL PLANE (issue, rare, human-driven)          DATA PLANE (invoke, frequent, scoped)
+        ───────────────────────────────────────            ────────────────────────────────────
+Ana user ──existing session/user auth──▶ Ana UI/API       ANDI (or any 3rd party) ──ana_cat_…──▶ /mcp
+          "generate a token for clientIds={X,Y,…}"                    bound to that fixed client set
+          Ana checks {X,Y,…} ⊆ UserClient(user)                       Ana restricts clientId to the set
+          Ana returns ana_cat_… (shown once)                          no clientId outside the set is trusted
+                     │
+                     └─ user copies the token, pastes it into ANDI's (or another app's) configuration
 ```
 
-- **Control plane** — ANDI's backend, authenticated with its **Entra app-only identity**, calls a new Ana endpoint to mint a workshop token for a given client. Ana bounds *which* clients ANDI may mint for via a server-side allow-list (`AppClient`, §5.3). This is where the strong Entra identity is spent — rarely, per workshop.
-- **Data plane** — the workshop AI holds only the **Ana-issued `ana_ws_…` token**, which is bound to one client. Every `/mcp` call it makes is pinned to that client by Ana. This credential is cheap, single-client, expirable, and revocable when the workshop ends.
+- **Control plane** — an Ana user, signed in through the Ana web app exactly as they already are today, opens a "generate token" screen, picks one of the clients they have access to, and gets back a raw token once. This is not a new authentication surface: it's the same delegated user identity described in [mcp-claude-oauth-entra.md](mcp-claude-oauth-entra.md), authorizing against the same `UserClient` table that already scopes that user's own interactive access.
+- **Data plane** — unchanged from the original design. The consuming application holds only the `ana_cat_…` token, bound to one client, cheap, single-client, expirable, and revocable at any time.
 
-Splitting them means the credential that lives inside the workshop runtime (the most exposed place) is the **least** powerful one: it can touch one client and nothing else, and it dies with the workshop.
+Splitting them still means the credential living inside the most-exposed place (a third party's backend) is the least powerful one. What's different is *how it gets there*: a human hands it over deliberately, rather than a service identity minting it on demand.
 
 ---
 
@@ -53,188 +44,166 @@ Splitting them means the credential that lives inside the workshop runtime (the 
 
 | Actor | Identity | Role |
 |---|---|---|
-| **ANDI backend (minter)** | new confidential client app reg — *"Ana MCP - ANDI Service"* | Control-plane client. Holds a secret/cert, calls the **mint** endpoint on its Entra app identity. |
-| **ANDI service principal** | the SP of that app reg in tenant `e99365e9-…` (`oid`/`appid`) | The subject Ana authorizes **to mint**. The `AppClient` allow-list is keyed on this. |
-| **Workshop token** | `ana_ws_…`, a record in Ana's DB | Data-plane credential. **Bound to one `clientId`.** Ana issues, validates, expires, and revokes it. |
-| **Workshop AI** | runs in ANDI's backend, holds a workshop token | Calls `/mcp` tools (`list_clients` / `search_documents` / `fetch_document`) for one workshop. |
-| **MCP server** | `/mcp` on the Ana API | OAuth 2.0 protected resource. Same endpoint Claude uses; now also accepts workshop tokens. |
-| **Resource app reg** | `AiAssistantApi` — `4279cecc-…` | Gains an app role `WorkshopToken.Mint` that guards the mint endpoint. |
-| **Authorization server** | Entra ID v2.0, tenant `e99365e9-…` | Issues the **control-plane** app token only. It has nothing to do with workshop tokens. |
+| **Ana user (issuer)** | an existing Ana user, signed in via the normal delegated flow | Generates a token for one of the clients they already have a `UserClient` row for, via the Ana UI. |
+| **Ana UI / API (issuance)** | existing Ana web app + API | Hosts the "generate token" feature. Authorizes issuance against the caller's own `UserClient` rows — no new allow-list, no new authorization server. |
+| **Client access token** | `ana_cat_…`, a record in Ana's DB | Data-plane credential. **Bound to one or more `clientId`s**, fixed at issuance. Ana issues, validates, expires, and revokes it. |
+| **Consuming application** | ANDI's backend, or any other third-party service the user chooses to hand the token to | Holds the raw token as a plain configuration value. Calls `/mcp` tools (`list_clients` / `search_documents` / `fetch_document`) for that one client. **No Entra identity, no app registration, no admin consent required.** |
+| **MCP server** | `/mcp` on the Ana API | OAuth 2.0 protected resource. Same endpoint Claude uses; now also accepts client access tokens. |
+
+Notably absent compared to the earlier draft: no dedicated Entra app registration for the consumer, no new app role, no service-principal allow-list. Issuance authorization piggybacks entirely on the user auth and `UserClient` data Ana already has.
 
 ---
 
 ## 4. The end-to-end flow
 
-### 4.1 Control plane — mint a workshop token (once per workshop)
+### 4.1 Control plane — issue a token (once per integration, via the Ana UI)
 
 ```
-ANDI backend                    Entra ID                        Ana API
-     │                             │                               │
-     │ 1. client-credentials: scope=api://4279cecc-…/.default      │
-     ├────────────────────────────▶                               │
-     │ 2. app token, roles=["WorkshopToken.Mint"], oid=ANDI SP     │
-     ◀────────────────────────────┤                               │
-     │ 3. POST /mcp/workshop-tokens  Authorization: Bearer <app token>
-     │    { "clientId": X, "workshopRef": "...", "ttl": "8h" }      │
-     ├────────────────────────────────────────────────────────────▶
-     │ 4. Ana: policy requires WorkshopToken.Mint role             │
-     │        Ana: X ∈ AppClient(ANDI SP)?  no → 403               │
-     │        Ana: create WorkshopToken{ hash, clientId=X, exp }   │
-     │ 5. { "token": "ana_ws_…", "expiresAt": "…" }  (raw token, once)
-     ◀────────────────────────────────────────────────────────────┤
+Ana user (signed in)              Ana UI                              Ana API
+     │                               │                                    │
+     │ 1. Open "Integrations" / "API tokens", pick one or more clients they can access
+     ├──────────────────────────────▶│                                    │
+     │                               │ 2. POST /api/client-tokens   Authorization: <existing user session>
+     │                               │    { "clientIds": [X, Y], "label": "ANDI workshops", "ttl": "8h" }
+     │                               ├───────────────────────────────────▶
+     │                               │ 3. Ana: {X, Y} ⊆ UserClient(caller)?  no → 403
+     │                               │        Ana: create ClientAccessToken{ hash, exp } + one
+     │                               │        ClientAccessTokenClient row per id in {X, Y}
+     │                               │ 4. { "token": "ana_cat_…", "expiresAt": "…" }  (raw token, shown once)
+     │                               ◀───────────────────────────────────┤
+     │ 5. UI displays the token once; user copies it                     │
+     ◀──────────────────────────────┤                                    │
+     │ 6. user pastes the token into ANDI's (or another app's) config     │
 ```
 
-ANDI stores `ana_ws_…` against the workshop and hands it to that workshop's AI runtime.
+This is an ordinary, already-authenticated Ana API call — not a new Entra client-credentials grant. It lives outside `/mcp/*` (e.g. `/api/client-tokens`) and is not touched by `McpChallengeMiddleware`.
 
-### 4.2 Data plane — the workshop AI calls MCP (many times)
+### 4.2 Data plane — the consuming app calls MCP (many times)
 
 ```
-Workshop AI (in ANDI)                                  Ana /mcp
-     │  MCP call, Authorization: Bearer ana_ws_…           │
+Consuming app (e.g. ANDI's workshop AI)                Ana /mcp
+     │  MCP call, Authorization: Bearer ana_cat_…          │
      ├─────────────────────────────────────────────────────▶
-     │  Ana: recognize workshop-token scheme (ana_ws_ prefix)
-     │  Ana: look up hash → { clientId=X, not expired, not revoked }
-     │  Ana: build principal carrying clientId=X claim      │
-     │  McpInvoke policy: workshop-token principal → allow  │
-     │  ClientScopeResolver: clientId is PINNED to X        │
-     │       (a clientId arg, if sent, must equal X, else 403)
-     │  → search/fetch run against client X only            │
+     │  Ana: recognize client-access-token scheme (ana_cat_ prefix)
+     │  Ana: look up hash → { clientIds={X,Y,…}, not expired, not revoked }
+     │  Ana: build principal carrying one clientId claim per bound client
+     │  McpInvoke policy: token principal → allow            │
+     │  ClientScopeResolver: clientId is RESTRICTED to the bound set
+     │       (a clientId arg, if sent, must be a member, else 403;
+     │        if omitted and the set has exactly one client, default to it)
+     │  → search/fetch run against the resolved client only  │
      ◀─────────────────────────────────────────────────────┤
 ```
 
-The workshop AI never presents an Entra token and never chooses a client. It could try to pass `clientId=Y` to `search_documents` — Ana ignores/rejects it in favor of the token's bound client. **There is no code path by which that runtime reaches another client.**
+The consuming app never presents a user or Entra credential and never chooses a client outside what the token allows. It could try to pass `clientId=Z` to `search_documents` — Ana rejects it unless `Z` is a member of the token's bound set. **There is no code path by which it reaches a client outside that set.**
 
 ---
 
 ## 5. What Ana must build
 
-Five additive pieces; none touches the existing delegated (Claude/FE) path.
+Four additive pieces; none touches the existing delegated (Claude/FE) path, and — unlike the earlier draft — **none requires a new Entra app registration or app role.**
 
-### 5.1 An app role `WorkshopToken.Mint` on `AiAssistantApi`
-
-Add an app role with `allowedMemberTypes: ["Application"]` — `WorkshopToken.Mint` — on `4279cecc-…`. It guards **only** the mint endpoint. ANDI's SP is granted it (admin consent). Note this role is *not* `Mcp.invoke`: ANDI's Entra identity may **mint**, but it may not itself **invoke** `/mcp` — only workshop tokens do that.
-
-### 5.2 A mint (and revoke) endpoint
-
-- `POST /mcp/workshop-tokens` — guarded by a policy requiring the `WorkshopToken.Mint` role. Body `{ clientId, workshopRef, ttl? }`. Validates `clientId ∈ AppClient(callerSpObjectId)`, creates a `WorkshopToken` record, returns the raw token **once**.
-- `POST /mcp/workshop-tokens/{id}/revoke` (or `DELETE`) — same guard; marks the record revoked. ANDI calls this when a workshop ends.
-
-These live under `/mcp/*` but, like `/mcp/status` and `/mcp/revoke` today, are **excluded from `McpChallengeMiddleware`** — they use plain Entra JWT, not the OAuth-resource challenge flow ([McpChallengeMiddleware.cs](../altus-ai-assistant/AltusAiAssistantApi/Middleware/McpChallengeMiddleware.cs)).
-
-### 5.3 An `AppClient` allow-list — the mint-time bound
-
-The machine-caller equivalent of `UserClient`; it caps which clients ANDI may mint tokens for:
-
-| Column | Meaning |
-|---|---|
-| `ServicePrincipalObjectId` (or `AppId`) | which minter (ANDI's SP) |
-| `ClientId` | an Altus client it may mint tokens for |
-| audit fields | per Ana's `BaseEntity` convention |
-
-Admin-provisioned out-of-band, exactly like `UserClient` rows are seeded — never self-serve by ANDI.
-
-### 5.4 A `WorkshopToken` entity + storage
+### 5.1 A `ClientAccessToken` entity + a client join table
 
 | Column | Meaning |
 |---|---|
 | `Id` | opaque record id (used for revoke) |
 | `TokenHash` | **hash** of the raw token — store the hash, never the token (API-key hygiene) |
-| `ClientId` | the single Altus client this token is bound to |
-| `IssuedToAppId` | which minter created it (audit) |
-| `WorkshopRef` | ANDI's workshop identifier (audit / bulk-revoke) |
+| `CreatedByUserId` | the Ana user (`oid`) who generated it — audit, and the basis for any future cascade-revoke |
+| `Label` | free-text, user-supplied, e.g. `"ANDI workshops - Acme Q3"` |
 | `ExpiresAt`, `RevokedAt` | lifecycle |
 
-Token format: high-entropy random with a recognizable prefix, e.g. `ana_ws_<random>`. **Opaque reference token, not a JWT** — chosen so a workshop ending can revoke it instantly by DB flag; a signed JWT would need a denylist to revoke early. (JWT is the alternative if statelessness ever outweighs easy revocation.)
+The clients a token is bound to live in a separate join table, deliberately mirroring `UserClient`:
 
-### 5.5 A `WorkshopToken` authentication scheme on `/mcp`
+`ClientAccessTokenClient` — `(TokenId, ClientId)` composite key, one row per client the token grants access to. A token scoped to a single client is just a table with one row; nothing about the single-client case is special-cased in the schema.
+
+Token format: high-entropy random with a recognizable prefix, `ana_cat_<random>`. Opaque reference token, not a JWT — same reasoning as before: a DB flag revokes it instantly, no denylist needed.
+
+### 5.2 An issuance UI + API in the existing Ana web app
+
+- A new "Integrations" / "API tokens" screen — an ordinary authenticated page, no new sign-in flow. The client picker is multi-select.
+- `POST /api/client-tokens` — body `{ clientIds: [...], label?, ttl? }`. Validates every id in `clientIds` is a member of `UserClient(callerUserId)`, creates a `ClientAccessToken` record plus one `ClientAccessTokenClient` row per id, returns the raw token **once**.
+- `GET /api/client-tokens` — lists the caller's own tokens (id, bound clients, label, createdAt, expiresAt, revoked) for management. Never returns the raw value again.
+- `POST /api/client-tokens/{id}/revoke` — revokes a token the caller created.
+
+These are regular Ana API endpoints authenticated the same way as the rest of the Ana FE — not under `/mcp/*`, not guarded by any new Entra role.
+
+### 5.3 A `ClientAccessToken` authentication scheme on `/mcp`
 
 `/mcp` currently authenticates via Entra JWT only (`AddMicrosoftIdentityWebApi`, [Program.cs](../altus-ai-assistant/AltusAiAssistantApi/Program.cs)). Add a second **authentication scheme** that:
 
-1. recognizes `Authorization: Bearer ana_ws_…` by prefix (a policy-scheme selector forwards `ana_ws_`-prefixed bearers to this handler, everything else to JwtBearer),
+1. recognizes `Authorization: Bearer ana_cat_…` by prefix (a policy-scheme selector forwards `ana_cat_`-prefixed bearers to this handler, everything else to JwtBearer),
 2. hashes and looks up the token; rejects if missing/expired/revoked,
 3. builds a `ClaimsPrincipal` carrying a `clientId` claim = the bound client.
 
-Then the two consuming pieces branch on caller type:
+### 5.4 Policy + resolver changes
 
-- **`McpInvoke` policy** ([Program.cs:45-75](../altus-ai-assistant/AltusAiAssistantApi/Program.cs)) — today it only inspects `scp` for `Mcp.invoke`. Extend it to **also** allow a principal authenticated by the workshop-token scheme. (Delegated Claude path unchanged.)
-- **`ClientScopeResolver`** ([ClientScopeResolver.cs](../altus-ai-assistant/AltusAiAssistantApi/Mcp/ClientScopeResolver.cs)) — today it reads the user's `oid`, looks up `UserClient`s, and validates the requested `clientId` ∈ that set. Add a branch: if the principal is a workshop token, **pin the `clientId` from its claim**; if the tool call also carried a `clientId` argument, require it to equal the bound client, else `ForbiddenAccessException`. `list_clients` returns just that one client. The tools already accept a `clientId` parameter ([McpService.cs:89,175](../altus-ai-assistant/AltusAiAssistantApi/Services/McpService.cs)) — that parameter simply stops being a *trusted input* for workshop callers.
+- **`McpInvoke` policy** ([Program.cs:45-75](../altus-ai-assistant/AltusAiAssistantApi/Program.cs)) — today it only inspects `scp` for `Mcp.invoke`. Extend it to **also** allow a principal authenticated by the client-access-token scheme. (Delegated Claude path unchanged.)
+- **`ClientScopeResolver`** ([ClientScopeResolver.cs](../altus-ai-assistant/AltusAiAssistantApi/Mcp/ClientScopeResolver.cs)) — today it reads the user's `oid`, looks up `UserClient`s, and validates the requested `clientId` ∈ that set. Add a branch: if the principal is a client access token, resolve its bound set from the `clientId` claims; if the tool call carried a `clientId` argument, require it ∈ that set, else `ForbiddenAccessException`; if omitted and the set has exactly one client, default to it (preserving today's single-client convenience); if omitted and the set has more than one, require the caller to specify. `list_clients` returns the token's full bound set, not just one.
 
-> As-is, a service principal's `oid` doesn't resolve to a user, so the current resolver already **fails closed** for any non-user caller — the new branch is purely additive and there's no risk of an app caller accidentally inheriting user scope.
-
----
-
-## 6. New Entra app registration
-
-A fifth client alongside the four in [entra-app-registrations.md](entra-app-registrations.md):
-
-| Field | Value |
-|---|---|
-| Display name | `Ana MCP - ANDI Service` |
-| Type | **Confidential client** (has a credential; no redirect URI — no user flow) |
-| Credential | **Federated credential or certificate preferred** over a shared secret; if a secret, store in Key Vault and rotate |
-| API permission | `AiAssistantApi` → **`WorkshopToken.Mint`** (Application permission) — **admin consent required** |
-| Grant used | `client_credentials`, scope `api://4279cecc-…/.default` |
-
-No redirect URIs, no delegated permissions, no Graph `User.Read`, and deliberately **no `Mcp.invoke`** — this identity mints; it does not invoke.
+> As before, a token principal's claims don't resolve to a real `UserClient` set, so the existing resolver already **fails closed** for it — the new branch is purely additive.
 
 ---
 
-## 7. Where the isolation boundary sits — and why this is strong
+## 6. Where the isolation boundary sits — and why this is still strong
 
-This design makes the **workshop → single client** boundary something **Ana enforces on every data-plane call**, not something ANDI is trusted to respect:
+- **Runtime credential is minimal.** The consuming app holds a token that *is* a client binding. It cannot express "a different client." The most-exposed credential is the least-privileged one — unchanged from the original design.
+- **Issuance is bounded by something that already exists.** A user cannot generate a token for a client they don't already have `UserClient` access to. There's nothing new to provision or keep in sync — it's the same table that already scopes their own interactive access.
+- **Blast radius is one client**, until expiry or revocation.
 
-- **Runtime credential is minimal.** The workshop AI holds a token that *is* a client binding. It cannot express "a different client." The most-exposed credential is the least-privileged one.
-- **Mint is bounded and audited.** ANDI can only mint for clients in its `AppClient` allow-list; every mint is an authenticated, logged control-plane action tied to a `workshopRef`.
-- **Blast radius is one client and one workshop.** A leaked `ana_ws_…` reaches one client until it expires or is revoked — not ANDI's whole client set.
+**Residual trust (be honest):** any user with access to a client can hand a live credential for it to whatever external application they choose — Ana has no way to know or control which third parties end up holding one of its tokens, beyond trusting the issuing user's judgment. That's not a new class of privileged identity, though: it's exactly the trust already placed in that user for their own interactive access, not an escalation. It's also *narrower* than the rejected design's shared minter identity (§9), which could mint across its entire allow-list rather than a set of clients a specific human vouches for. If a client's data is sensitive enough that self-service issuance is unacceptable, the escalation path is an admin-approval gate on issuance for that specific client (§10).
 
-**Residual trust (be honest):** ANDI's *minter* identity can mint for **any** client in its allow-list, so a compromised ANDI backend could mint tokens across that whole set. That's inherent — someone has to be trusted to say "this workshop is for client X." We shrink that surface by (a) keeping the `AppClient` allow-list tight, (b) short workshop-token TTLs, (c) treating the mint credential as high-value (federated/cert, Key Vault), and (d) auditing mints. If even that is too broad, the escalation is **one minter identity per Altus client** (§9) — but that reintroduces credential sprawl and is not recommended unless a shared minter is judged unacceptable.
-
----
-
-## 8. Token lifecycle
-
-- **Issue** — at workshop start (or first AI turn). ANDI mints with a TTL matched to the workshop (hours, not days).
-- **Use** — the workshop AI calls `/mcp` with the token for the workshop's duration.
-- **Expire** — `ExpiresAt` passes → Ana rejects; ANDI re-mints if the workshop runs long.
-- **Revoke** — workshop ends, or a token is suspected leaked → ANDI calls revoke, or an admin bulk-revokes by `WorkshopRef`. Because tokens are DB-backed reference tokens, revocation is immediate (no denylist propagation).
+Supporting multiple clients on one token widens the blast radius of a leak from "one client" to "however many clients the issuer chose to include" — up to their entire accessible set if they select all of them. Ana only enforces that every included client is already in the issuer's `UserClient` set; it doesn't enforce minimality beyond that. The UI should nudge toward narrow, deliberate selection (no one-click "select all") so the common case stays small (§10).
 
 ---
 
-## 9. Failure modes & how to read them
+## 7. Token lifecycle
+
+- **Issue** — a user clicks "generate token" in the Ana UI for one or more clients they can access, and hands the raw value to the consuming application out of band.
+- **Use** — the consuming app calls `/mcp` with the token for as long as it's valid.
+- **Expire** — `ExpiresAt` passes → Ana rejects; the user generates a new one.
+- **Revoke** — the creating user revokes it from the UI, or a token is suspected leaked. Revocation is all-or-nothing for the token (not per-client); because tokens are DB-backed reference tokens, revocation is immediate (no denylist propagation).
+- **Open**: if the creating user's own `UserClient` access to one of a token's bound clients is later removed, the existing token does **not** automatically shrink or revoke unless that cascade is explicitly built (§10).
+
+---
+
+## 8. Failure modes & how to read them
 
 | Symptom | Likely cause | Where to look |
 |---|---|---|
-| `403` on mint | ANDI SP lacks `WorkshopToken.Mint` app role / no admin consent | Entra → ANDI reg → API permissions (§6) |
-| `403` on mint for a specific `clientId` | No `AppClient` row for (ANDI SP, that client) | Provisioning gap (§5.3) — expected, not a bug |
-| `401` on `/mcp` with `ana_ws_…` | Workshop-token scheme not wired, or token expired/revoked | §5.5; check `ExpiresAt`/`RevokedAt` |
-| Workshop AI reaches the wrong client | Should be impossible — investigate immediately | Resolver not pinning `clientId` from the token (§5.5) |
-| `403` when the AI passes a `clientId` arg | Arg ≠ the token's bound client (working as intended) | Have the AI omit `clientId`; the token pins it |
-| Mint token `aud` invalid | `accessTokenAcceptedVersion` ≠ 2 on `AiAssistantApi` | Same knob as the Claude flow ([companion §4.3](mcp-claude-oauth-entra.md)) |
+| `403` on generate | caller lacks a `UserClient` row for the requested `clientId` | expected, not a bug |
+| `401` on `/mcp` with `ana_cat_…` | token scheme not wired, or token expired/revoked | §5.3; check `ExpiresAt`/`RevokedAt` |
+| Consuming app reaches the wrong client | should be impossible — investigate immediately | resolver not pinning `clientId` from the token (§5.4) |
+| `403` when the caller passes a `clientId` arg | arg ∉ the token's bound client set (working as intended) | have the caller omit `clientId` (if the token is single-client) or pass one that's in the set |
+| Token still works after the issuing user leaves or loses client access | cascade-revoke not implemented | decide the policy explicitly (§10) — not a bug in the current design, but worth resolving before launch |
 
 ---
 
-## 10. Why not the alternatives
+## 9. Why not the alternatives
 
-- **ANDI passes `clientId` on its own app-only token, Ana checks an allow-list.** Simpler, but the runtime credential can name *any* client in ANDI's allow-list — the single-client boundary is only as good as ANDI's correctness. This design deliberately removes `clientId` from the runtime's control by baking it into an Ana-issued token.
-- **On-behalf-of / delegated per participant.** Participants aren't Ana users and have no `UserClient`s, and the scoping we need is *workshop → client*, not *user → client*. OBO solves a problem we don't have.
-- **One Entra app reg per Altus client.** True per-client hard isolation, but N credentials to manage. The workshop-token model gets the same runtime guarantee (a credential that can touch one client) without minting N Entra identities — Ana issues the per-client credential itself.
-- **A plain REST endpoint instead of MCP.** Viable if ANDI only needs retrieval, but ANDI's workshop facilitation is an **LLM agent** that benefits from the existing tool contract, and reusing `/mcp` keeps one data-plane surface.
-
----
-
-## 11. Open questions
-
-- **Mint trigger & re-mint.** Does ANDI mint eagerly at workshop start, or lazily on first AI turn? How are long workshops (past TTL) re-minted — silent refresh or explicit?
-- **One minter or per-client minters?** Drives the §7 residual-trust trade-off. Depends on how many clients ANDI serves and the acceptable blast radius.
-- **Credential type for the minter.** Federated identity credential (no secret to rotate) if ANDI's backend runs on Azure with a managed identity; else certificate; secret last.
-- **Provisioning UX for `AppClient`.** Admin screen or migration/script to start (mirrors however `UserClient` is seeded).
-- **Telemetry.** `McpTelemetry` logs `userObjectId` / `userPrincipalName`. For workshop callers, log `workshopRef` + bound `clientId` + minter `appId` instead; confirm that satisfies audit.
-- **Rate/size caps.** An autonomous agent calls far harder than a human — do the `McpSettings` caps need workshop-caller-specific limits?
+- **The consuming app mints its own token via an Entra app registration + admin-provisioned allow-list** (the earlier draft of this doc). More conventional in one sense — an admin explicitly approves which app may reach which client — but it means standing up a new Entra app registration, app role grant, and allow-list table for *every* third-party integration before it can receive a single token, plus a shared minter identity whose blast radius spans its whole allow-list (worse than this design's per-issuance, per-user scoping). Reusing access a human already has removes an entire authorization surface without loosening anything: that user could already see the client's data interactively.
+- **On-behalf-of / delegated per participant.** Workshop participants aren't Ana users and have no `UserClient`s, and the scoping needed is *integration → client*, not *participant → client*. OBO solves a problem we don't have.
+- **One Entra app registration per Altus client.** True per-client hard isolation, but N Entra identities to manage — and now doubly unnecessary, since no app registration is needed for issuance at all under this design.
+- **A single static shared secret per client**, handed out instead of individually generated tokens. Rejected: no per-issuance audit trail (who created it, for what) and no way to revoke one integration without breaking every other consumer of that client's secret.
+- **Keep tokens strictly single-client; issue several tokens if an integration needs several clients.** Simpler schema (no join table), but pushes the cost onto every consuming app: it now has to manage, configure, and rotate N credentials for what is conceptually one integration. A multi-client token has the same blast radius as holding N single-client tokens at once, with none of the bookkeeping — so the join-table approach (§5.1) was chosen instead.
+- **A plain REST endpoint instead of MCP.** Viable if a consumer only needs retrieval, but ANDI's workshop facilitation is an **LLM agent** that benefits from the existing tool contract, and reusing `/mcp` keeps one data-plane surface for every consumer, not just ANDI.
 
 ---
 
-## 12. References
+## 10. Open questions
 
-- **Companion:** [mcp-claude-oauth-entra.md](mcp-claude-oauth-entra.md) (delegated flow), [entra-app-registrations.md](entra-app-registrations.md) (registrations).
-- **Code to change:** [Program.cs](../altus-ai-assistant/AltusAiAssistantApi/Program.cs) (`McpInvoke` policy, second auth scheme + policy-scheme selector, mint-endpoint authz), [ClientScopeResolver.cs](../altus-ai-assistant/AltusAiAssistantApi/Mcp/ClientScopeResolver.cs) (workshop-token branch), [McpService.cs](../altus-ai-assistant/AltusAiAssistantApi/Services/McpService.cs) + tools under [Mcp/Tools/](../altus-ai-assistant/AltusAiAssistantApi/Mcp/Tools/) (`list_clients` pinned to one client), [McpChallengeMiddleware.cs](../altus-ai-assistant/AltusAiAssistantApi/Middleware/McpChallengeMiddleware.cs) (exclude the mint endpoints), new `AppClient` + `WorkshopToken` entities + EF configs under [Data/](../altus-ai-assistant/AltusAiAssistantApi/Data/).
-- **Specs:** OAuth 2.0 Client Credentials Grant (RFC 6749 §4.4); Microsoft identity platform — app roles / application permissions, `.default` scope, client-credentials with certificates & federated credentials, access-token versions (`accessTokenAcceptedVersion`). Workshop tokens are an **Ana-proprietary** reference-token scheme, not an OAuth artifact.
+- **Cascade revoke.** If the issuing user's own `UserClient` access to one of a token's bound clients is removed (they leave, or lose access), should that client be dropped from the token, should the whole token be revoked, or is this an accepted gap (as with e.g. GitHub PATs)?
+- **Client-admin visibility.** Should someone other than a token's creator — a client owner/admin — be able to see and revoke tokens touching their client, in case the creator is unreachable or a token needs shutting down urgently?
+- **Self-service opt-out.** Should certain clients be able to disable self-service token issuance entirely, falling back to an admin-approval step? This is the escalation path referenced in §6 if a client's data is judged too sensitive for any user with access to self-issue integration tokens.
+- **Caps.** A max number of active tokens per user/client, a max number of clients per token, and a default/max TTL.
+- **UI placement and defaults.** Standalone "Integrations" / "API tokens" page, or a tab within each client's own settings? And should the multi-select client picker default to none-selected with no "select all" shortcut, to keep the common token narrowly scoped (§6)?
+- **Telemetry.** `McpTelemetry` logs `userObjectId` / `userPrincipalName` for the delegated path. For token callers, log `CreatedByUserId` + bound `clientId` + `label` instead; confirm that satisfies audit.
+- **Rate/size caps.** An autonomous agent (e.g. ANDI's workshop AI) calls far harder than a human — do `McpSettings` caps need token-caller-specific limits?
+
+---
+
+## 11. References
+
+- **Companion:** [mcp-claude-oauth-entra.md](mcp-claude-oauth-entra.md) (delegated flow — token issuance reuses this same user identity), [entra-app-registrations.md](entra-app-registrations.md) (registrations fronting `/mcp`; unchanged by this design).
+- **Code to change:** [Program.cs](../altus-ai-assistant/AltusAiAssistantApi/Program.cs) (`McpInvoke` policy, second auth scheme + policy-scheme selector), [ClientScopeResolver.cs](../altus-ai-assistant/AltusAiAssistantApi/Mcp/ClientScopeResolver.cs) (client-access-token branch resolving a *set* of clients), [McpService.cs](../altus-ai-assistant/AltusAiAssistantApi/Services/McpService.cs) + tools under [Mcp/Tools/](../altus-ai-assistant/AltusAiAssistantApi/Mcp/Tools/) (`list_clients` returning the token's bound set), new `/api/client-tokens` controller (issuance, list, revoke — standard Ana API auth, not under `/mcp/*`), new `ClientAccessToken` entity + `ClientAccessTokenClient` join table + EF configs under [Data/](../altus-ai-assistant/AltusAiAssistantApi/Data/).
+- **Specs:** none new on the issuance side — it rides the existing delegated user auth. Client access tokens are an **Ana-proprietary** reference-token scheme, not an OAuth artifact, same as the earlier draft's workshop tokens.
