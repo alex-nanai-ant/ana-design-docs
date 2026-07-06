@@ -38,9 +38,9 @@ The full scope string a client requests is `<App ID URI>/<value>` — e.g. `api:
 |---|---|---|
 | All | `api://4279cecc-ad27-4e90-81be-af8e4c038897` | Yes ✓ |
 | QA | `https://ana-api-qa.engineering.altusnova.com/mcp` | Yes ✓ |
-| Prod | `https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net` | **No** ❌ — see Outstanding Issue below |
+| Prod | `https://ana-api.engineering.altusnova.com/mcp` (custom domain) | Yes ✓ |
 
-Verified against live Entra (`az ad app show`): `identifierUris` is exactly `["https://ana-api-qa.engineering.altusnova.com/mcp", "api://4279cecc-ad27-4e90-81be-af8e4c038897"]`. The bare QA domain (without `/mcp`) is **not** registered.
+Prod now uses a custom domain (`ana-api.engineering.altusnova.com`) on the App Service, mirroring the QA pattern, so its Application ID URI is a verified-domain subdomain instead of the `*.azurewebsites.net` hostname. See resolved issue below.
 
 **Config reference:** `appsettings.json` → `AzureAdApi` section; `Program.cs` → `.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAdApi"))`
 
@@ -64,10 +64,10 @@ Verified against live Entra (`az ad app show`): `identifierUris` is exactly `["h
 | Primary FE | QA (App Service) | `https://ai-assistant-fe-qa-ckcwc7ffb0fjbyb7.eastus2-01.azurewebsites.net` | ✓ |
 | Primary FE | Prod (App Service) | `https://ai-assistant-fe-a5c0eba9awhnb7hn.eastus2-01.azurewebsites.net` | ✓ |
 | Primary FE | Prod (custom domain) | `https://ana.engineering.altusnova.com` | — |
-| Voice FE | Static Web App | `https://calm-sky-093bdb50f.1.azurestaticapps.net` | ✓ |
-| Voice FE | Static Web App | `https://victorious-dune-027c4fb0f.3.azurestaticapps.net` | ✓ |
+| Voice FE | Static Web App (QA) | `https://calm-sky-093bdb50f.1.azurestaticapps.net` | ✓ |
+| Voice FE | Static Web App (Prod) | `https://victorious-dune-027c4fb0f.3.azurestaticapps.net` | ✓ |
 
-Voice FE deploys to Static Web Apps `ai-assistant-voice-qa-fe` / `ai-assistant-voice-prod-fe` (see `altus-ai-assistant-voice/azure-pipelines-fe.yml`); the mapping of which random `azurestaticapps.net` hostname is QA vs prod is not yet confirmed here.
+Voice FE deploys to Static Web Apps `ai-assistant-voice-qa-fe` / `ai-assistant-voice-prod-fe` (see `altus-ai-assistant-voice/azure-pipelines-fe.yml`); `calm-sky` is QA, `victorious-dune` is prod.
 
 **Requested scopes:** `api://4279cecc-ad27-4e90-81be-af8e4c038897/user-access`
 
@@ -171,25 +171,21 @@ The `McpSettings:ResourceUri` is what is advertised as `resource` in the OAuth d
 |---|---|---|
 | Development | `https://localhost:5001/mcp` | N/A (local only) |
 | QA | `https://ana-api-qa.engineering.altusnova.com/mcp` | Yes ✓ |
-| Prod | `https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net/mcp` | No ⚠️ |
+| Prod | `https://ana-api.engineering.altusnova.com/mcp` | Yes ✓ |
 
 **Config refs:** `appsettings.json` (base) + `appsettings.QA.json` / `appsettings.Prod.json` override `McpSettings:ResourceUri`.
 
 ---
 
-## Outstanding Issue — Prod MCP Not Working
+## Resolved Issue — Prod MCP Now Working
 
-**Root cause:** The prod API hostname (`https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net`) is not registered as an Application ID URI on the `AiAssistantApi` registration. When MCP clients send a token request using this URL as the `resource` parameter, Azure AD cannot resolve it to any known app and rejects the request.
+**Former root cause:** The prod API hostname (`https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net`) was not registered as an Application ID URI on the `AiAssistantApi` registration. When MCP clients sent a token request using this URL as the `resource` parameter, Azure AD couldn't resolve it to any known app and rejected the request.
 
-**The fix — custom domain (only viable option):**
+**Why the raw hostname couldn't be registered:** Entra rejects any `https://` Application ID URI that isn't on a **verified domain of the tenant** (or a subdomain). The verified domain here is `altusnova.com` (the app's `publisherDomain`). `*.azurewebsites.net` is Microsoft's shared domain, not one the org owns, so it could never be an identifier URI.
 
-Configure a verified-domain custom domain and use it as the ResourceUri:
-1. Configure a custom domain on the prod App Service (e.g., `https://ana-api.engineering.altusnova.com`) — mirrors the QA pattern.
-2. Register that domain as an Application ID URI on `AiAssistantApi` → Expose an API.
-3. Update `appsettings.Prod.json` → `McpSettings:ResourceUri` to use the custom domain.
+**The fix (applied):**
+1. Configured a custom domain, `ana-api.engineering.altusnova.com`, on the prod App Service — mirrors the QA pattern (`ana-api-qa.engineering.altusnova.com`).
+2. Registered `https://ana-api.engineering.altusnova.com/mcp` as an Application ID URI on `AiAssistantApi` → Expose an API.
+3. Updated `appsettings.Prod.json` → `McpSettings:ResourceUri` to `https://ana-api.engineering.altusnova.com/mcp`.
 
-**Why the raw hostname can't be registered (confirmed):** Entra rejects any `https://` Application ID URI that isn't on a **verified domain of the tenant** (or a subdomain). The verified domain here is `altusnova.com` (the app's `publisherDomain`). Attempting to add `https://ai-assistant-api-prod-…azurewebsites.net/mcp` fails with:
-
-> Values of IdentifierUris property must use a verified domain of the organization or its subdomain
-
-`*.azurewebsites.net` is Microsoft's shared domain, not one the org owns, so it can never be an identifier URI. This is exactly why QA works — `ana-api-qa.engineering.altusnova.com` is a subdomain of the verified `altusnova.com`. A custom domain is therefore mandatory, not merely preferred.
+Prod MCP OAuth now resolves correctly, consistent with QA.
