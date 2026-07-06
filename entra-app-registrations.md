@@ -18,18 +18,29 @@ All registrations are **shared across QA and Prod** — there are no environment
 
 **Exposed scopes:**
 
-| Scope | Full ID | Consumers |
+| Scope | Value | Scope `id` (GUID) | Consumers |
+|---|---|---|---|
+| `user-access` | `user-access` | `5ee826c9-46ab-441a-9ec7-52bb99bed16b` | Ana FE (MSAL login) |
+| `Mcp.invoke` | `Mcp.invoke` | `3b3e9efa-0089-4847-91ac-3045e4bc3416` | Ana MCP - Claude Client |
+
+The full scope string a client requests is `<App ID URI>/<value>` — e.g. `api://4279cecc-.../user-access` or `https://ana-api-qa.engineering.altusnova.com/mcp/user-access`. Both resolve to the same scope; the issued token's `scp` claim is just the value (`user-access`). Other registrations reference these scopes by the GUID `id`, not the string.
+
+**Pre-authorized client applications** (`api.preAuthorizedApplications`) — a pre-authorized client skips the user consent prompt for the listed scopes:
+
+| Client | Scope | Consent prompt? |
 |---|---|---|
-| `user-access` | `api://4279cecc-.../user-access` | Ana FE (MSAL login) |
-| `Mcp.invoke` | `api://4279cecc-.../Mcp.invoke` | Ana MCP - Claude Client |
+| Ana FE (`d341df90-...`) | `user-access` | **No** — pre-authorized, so FE users are never prompted |
+| Ana MCP - Claude Client (`61e3c182-...`) | `Mcp.invoke` | **Yes** — *not* pre-authorized; Claude users hit the interactive consent screen (by design for the MCP OAuth flow) |
 
 **App ID URIs registered** (required for Azure AD to accept `resource=` in token requests):
 
-| Environment | URI |
-|---|---|
-| All | `api://4279cecc-ad27-4e90-81be-af8e4c038897` |
-| QA | `https://ana-api-qa.engineering.altusnova.com` |
-| Prod | `https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net` ⚠️ see note below |
+| Environment | URI | Registered? |
+|---|---|---|
+| All | `api://4279cecc-ad27-4e90-81be-af8e4c038897` | Yes ✓ |
+| QA | `https://ana-api-qa.engineering.altusnova.com/mcp` | Yes ✓ |
+| Prod | `https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net` | **No** ❌ — see Outstanding Issue below |
+
+Verified against live Entra (`az ad app show`): `identifierUris` is exactly `["https://ana-api-qa.engineering.altusnova.com/mcp", "api://4279cecc-ad27-4e90-81be-af8e4c038897"]`. The bare QA domain (without `/mcp`) is **not** registered.
 
 **Config reference:** `appsettings.json` → `AzureAdApi` section; `Program.cs` → `.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAdApi"))`
 
@@ -43,13 +54,20 @@ All registrations are **shared across QA and Prod** — there are no environment
 | Application ID URI | None (client app, not a resource) |
 | Role | Public client — MSAL popup/redirect login for the React SPA |
 
-**Redirect URIs:**
+> **Shared with the voice frontend.** The `altus-ai-assistant-voice` frontend reuses this same registration and the same `user-access` scope (its Azure DevOps pipeline sets `VITE_MSAL_CLIENT_ID = d341df90-…`). That is why the two `azurestaticapps.net` hosts below — the voice FE's QA/prod Azure Static Web Apps — are registered here. There is no separate app registration for voice.
 
-| Environment | URI |
-|---|---|
-| Development | `http://localhost:3000` |
-| QA | `https://ai-assistant-fe-qa-ckcwc7ffb0fjbyb7.eastus2-01.azurewebsites.net` |
-| Prod | `https://ai-assistant-fe-a5c0eba9awhnb7hn.eastus2-01.azurewebsites.net` |
+**Redirect URIs** (all SPA platform type). Each host is registered both bare and with the `/auth-redirect.html` suffix that MSAL redirects to:
+
+| App | Environment | Bare URI | `/auth-redirect.html` variant |
+|---|---|---|---|
+| Primary FE | Development | `http://localhost:3000` | ✓ |
+| Primary FE | QA (App Service) | `https://ai-assistant-fe-qa-ckcwc7ffb0fjbyb7.eastus2-01.azurewebsites.net` | ✓ |
+| Primary FE | Prod (App Service) | `https://ai-assistant-fe-a5c0eba9awhnb7hn.eastus2-01.azurewebsites.net` | ✓ |
+| Primary FE | Prod (custom domain) | `https://ana.engineering.altusnova.com` | — |
+| Voice FE | Static Web App | `https://calm-sky-093bdb50f.1.azurestaticapps.net` | ✓ |
+| Voice FE | Static Web App | `https://victorious-dune-027c4fb0f.3.azurestaticapps.net` | ✓ |
+
+Voice FE deploys to Static Web Apps `ai-assistant-voice-qa-fe` / `ai-assistant-voice-prod-fe` (see `altus-ai-assistant-voice/azure-pipelines-fe.yml`); the mapping of which random `azurestaticapps.net` hostname is QA vs prod is not yet confirmed here.
 
 **Requested scopes:** `api://4279cecc-ad27-4e90-81be-af8e4c038897/user-access`
 
@@ -86,12 +104,13 @@ All registrations are **shared across QA and Prod** — there are no environment
 **Config reference:** Not referenced in `appsettings.json` — this client ID is provided externally to MCP consumers (e.g., when configuring Claude.ai's remote MCP integration).
 
 ---
-
+ 
 ### 4. AzureAd — API Service Identity
 
 | Field | Value |
 |---|---|
 | Client ID | `eed2ebe5-5083-41bf-b5d0-8c922faa6331` |
+| Entra display name | `AiAssistantApiGraphClient` ("AzureAd" is only the `appsettings.json` section name) |
 | Role | Daemon / service-to-service identity used by the API for outbound calls (e.g., OBO flows, Graph calls) |
 
 **Config reference:** `appsettings.json` → `AzureAd` section
@@ -103,6 +122,7 @@ All registrations are **shared across QA and Prod** — there are no environment
 | Field | Value |
 |---|---|
 | Client ID | `f81e2ce9-6a0b-47bb-be6b-7af5264254aa` |
+| Entra display name | `AnaMailIngestionService` ("MailReadingApp" is only the `appsettings.json` section name) |
 | Role | Confidential daemon client for reading Exchange mailboxes via Microsoft Graph (used by `AltusAiMailSync` Azure Function) |
 
 **Config reference:** `appsettings.json` → `MailReadingApp` section
@@ -161,17 +181,15 @@ The `McpSettings:ResourceUri` is what is advertised as `resource` in the OAuth d
 
 **Root cause:** The prod API hostname (`https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net`) is not registered as an Application ID URI on the `AiAssistantApi` registration. When MCP clients send a token request using this URL as the `resource` parameter, Azure AD cannot resolve it to any known app and rejects the request.
 
-**Fix options:**
+**The fix — custom domain (only viable option):**
 
-**Option A — Register the prod hostname (quickest):**
-In the `AiAssistantApi` app registration → Expose an API → add:
-```
-https://ai-assistant-api-prod-g7e7ewcab7ekb8bk.eastus2-01.azurewebsites.net
-```
+Configure a verified-domain custom domain and use it as the ResourceUri:
+1. Configure a custom domain on the prod App Service (e.g., `https://ana-api.engineering.altusnova.com`) — mirrors the QA pattern.
+2. Register that domain as an Application ID URI on `AiAssistantApi` → Expose an API.
+3. Update `appsettings.Prod.json` → `McpSettings:ResourceUri` to use the custom domain.
 
-**Option B — Set up a custom domain for prod (mirrors QA pattern):**
-1. Configure a custom domain on the prod App Service (e.g., `https://ana-api.engineering.altusnova.com`)
-2. Register that domain as an Application ID URI on `AiAssistantApi`
-3. Update `appsettings.Prod.json` → `McpSettings:ResourceUri` to use the custom domain
+**Why the raw hostname can't be registered (confirmed):** Entra rejects any `https://` Application ID URI that isn't on a **verified domain of the tenant** (or a subdomain). The verified domain here is `altusnova.com` (the app's `publisherDomain`). Attempting to add `https://ai-assistant-api-prod-…azurewebsites.net/mcp` fails with:
 
-Option B is preferred for stability — the raw Azure App Service hostname changes if the service is recreated, while a custom domain is durable.
+> Values of IdentifierUris property must use a verified domain of the organization or its subdomain
+
+`*.azurewebsites.net` is Microsoft's shared domain, not one the org owns, so it can never be an identifier URI. This is exactly why QA works — `ana-api-qa.engineering.altusnova.com` is a subdomain of the verified `altusnova.com`. A custom domain is therefore mandatory, not merely preferred.

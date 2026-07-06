@@ -14,12 +14,6 @@ This document describes the changes on the `feat/mcp` branch, how to land them c
 
 **"Migrate MCP onto MAF" means re-pointing couplings, not re-merging.** The MCP code was authored against the pre-MAF `ChatService` and still binds to the legacy completion/retrieval surface that the MAF plan removes in Phase 4. The migration work is to re-point those bindings at the MAF abstractions before the legacy code is deleted.
 
-Untracked working-tree artifacts to clean up before merging:
-
-- `AltusAiAssistantApi/Program.cs.orig`
-- `AltusAiAssistantApi/appsettings.QA.json.orig`
-- `.vscode/`
-
 ---
 
 ## 1. What the branch changes
@@ -33,7 +27,7 @@ The branch adds a **remote MCP server** (`/mcp`) that exposes Ana's corpus to ex
   - `Mcp/Tools/ListClientsTool.cs` — enumerate the caller's allowed clients.
   - `Mcp/Tools/SearchDocumentsTool.cs` — vector search scoped to one client.
   - `Mcp/Tools/FetchDocumentTool.cs` — fetch a full source document by `documentId` (index `parent_id`), paginated by chunk.
-- A fourth tool, `Mcp/Tools/AskAnaTool.cs`, exists but is **deliberately not registered** (commit `ec1ca8b "feat: turn off ask ana tool"`). It is the only piece that calls full chat completion, and is currently **dormant**.
+- A fourth tool, `Mcp/Tools/AskAnaTool.cs`, previously existed (disabled via commit `ec1ca8b "feat: turn off ask ana tool"`) as the only piece that called full chat completion. It has since been **deleted** along with `McpService.AskAna`, its input/result DTOs, and `AnaSourceDto`. The MCP surface is now exactly the three registered retrieval tools.
 
 ### 1.2 Auth / security (OAuth protected resource, RFC 9728)
 - `Controllers/McpDiscoveryController.cs` serves `/.well-known/oauth-protected-resource`.
@@ -51,7 +45,7 @@ The branch adds a **remote MCP server** (`/mcp`) that exposes Ana's corpus to ex
 - New `Services/IAnaSearchService.cs` — `Search(...)` + `FetchByDocumentId(...)`, returning `DocumentHit` / `DocumentFetchResult` records — **implemented by `ChatService`** (the `ChatService : IChatService, IAnaSearchService` additions).
   - `Search` reuses the **legacy** `GetNextGptDeploymentParams()` + `GetEmbedding(query, gptParams)` and re-implements vector search inline.
   - `FetchByDocumentId` is genuinely new logic: counts chunks for a `parent_id`, then pages them in `chunk_id` order, concatenating up to `maxChars`/`maxChunks`.
-- `Services/McpService.cs` orchestrates the tools; `AskAna` calls `_chatService.CompleteChat` / `CompleteChatWithPlanning`.
+- `Services/McpService.cs` orchestrates the three retrieval tools. (The former `AskAna` orchestration, which called `_chatService.CompleteChat` / `CompleteChatWithPlanning`, has been removed.)
 - DI (`Program.cs`): `ChatService` is registered as its own type, with **both** `IChatService` and `IAnaSearchService` resolving to that same instance.
 
 ### 1.5 Observability + PII
@@ -63,7 +57,7 @@ The branch adds a **remote MCP server** (`/mcp`) that exposes Ana's corpus to ex
 
 ### 1.6 Config & models
 - `Models/McpSettings.cs` + a `McpSettings` block in every `appsettings.*.json`, validated `OnStart` (rejects missing or `PLACEHOLDER` values).
-- ~13 DTO / record files under `Models/Mcp/` (tool inputs/results, `AnaSourceDto`, `OAuthProtectedResourceMetadataDto`, `McpStatusResponse`, `McpHealthResponseDto`, etc.).
+- DTO / record files under `Models/Mcp/` (tool inputs/results, `OAuthProtectedResourceMetadataDto`, `McpStatusResponse`, `McpHealthResponseDto`, etc.). The `ask_ana` DTOs and `AnaSourceDto` were removed with the tool.
 
 ---
 
@@ -79,17 +73,8 @@ The current implementation lives on `ChatService` and calls `GetNextGptDeploymen
 - Change DI from `AddScoped<IAnaSearchService>(sp => sp.GetRequiredService<ChatService>())` to the new type; drop `ChatService : IAnaSearchService` and the double-registration.
 - **Outcome:** `search_documents` / `fetch_document` no longer depend on anything Phase 4 removes.
 
-### b. Re-point `McpService.AskAna` at `ICompleteChatService` (when/if re-enabled)
-The MAF end-state makes `IChatService` CRUD-only and `ICompleteChatService` the sole completion surface. `AskAna` currently depends on `IChatService` for completion.
-
-- **Sequencing matters:** triage (file-session / `UsePlanner` / reasoning-tier) still lives in `ChatService.CompleteChatWithPlanning` (the plan's open **Deviation 4**). Switching `AskAna` to `ICompleteChatService.CompleteChatWithPlanning` *before* triage is relocated would bypass that routing.
-- **Order:** relocate triage into the MAF service first, then point `AskAna` at `ICompleteChatService`. Until then, leaving `AskAna` on `IChatService` is the correct interim.
-
-### c. Verify the `MessageContext` parity contract
-`McpService.MapSources` reads `chatResponse.MessageContext`. The MAF `PersistTurn` path must populate that DTO with the same citation shape the legacy path did — exactly the "contracts the MAF methods must reproduce" concern in the MAF plan. Worth a targeted check for the non-streaming MCP caller specifically.
-
-### d. Decide `AskAnaTool`'s fate
-It is disabled. Either remove it (plus `McpService.AskAna` and its DTOs) to shrink the surface, or keep it dormant and document that re-enabling requires (b). Don't leave it half-wired indefinitely.
+### b. `ask_ana` — removed (was: re-point at `ICompleteChatService`)
+**Resolved by deletion.** `ask_ana` was the only MCP coupling to the completion surface (`IChatService.CompleteChat` / `CompleteChatWithPlanning`) and the only consumer of `chatResponse.MessageContext` (via the now-deleted `McpService.MapSources`). With the tool removed, the MCP layer no longer touches completion at all, so the earlier concerns — re-pointing `AskAna` at `ICompleteChatService`, the triage-relocation sequencing (MAF **Deviation 4**), and the `MessageContext` parity check for the non-streaming MCP caller — no longer apply to MCP.
 
 ### e. Housekeeping before merging to `main`
 - Delete `Program.cs.orig`, `appsettings.QA.json.orig`, `.vscode/`.
@@ -107,8 +92,8 @@ The uncommitted `appsettings.Development.json` and `appsettings.json` contain **
 ### Content-exclusion parity gap
 The chat retrieval path applies the `IContentExclusionService` exclusion filter; the new `IAnaSearchService.Search` / `FetchByDocumentId` do **not**. `search_documents` / `fetch_document` can therefore surface chunks the in-product chat would suppress for that client — a governance hole on an externally exposed tool. Thread the same exclusion filter through (the MAF `MafRunContext.ExclusionFilter` is the natural source once retrieval moves to the MAF layer).
 
-### Transient session leak in `AskAna`
-`AskAna` does `ChatSession.CreateStandardSession(...)` + `SaveChanges` on every call, `PersistTurn` then writes the user+assistant pair, and it returns `SessionId: 0`. Orphan sessions accumulate forever and the returned id is misleading. Reuse a session per MCP client, or mark transient sessions and reap them. (Lower urgency while the tool is disabled; fix before re-enabling.)
+### Transient session leak in `AskAna` — resolved by deletion
+`AskAna` used to create a `ChatSession` per call (`CreateStandardSession(...)` + `SaveChanges`), leaking orphan sessions and returning a misleading `SessionId: 0`. Removing the tool eliminates this. (It was also the sole reason the MCP layer needed `UserClient.Id`; with it gone, the whole MCP surface is scoped purely by `Client.Id`.)
 
 ### Duplicated Azure Search client construction
 `Search` and `FetchByDocumentId` each new up `SearchClient` / endpoint / credential inline — the same construction `KnowledgeRetriever` already performs, plus a third copy of the index-name / embedding logic. Consolidating (migration item **a**) removes the duplication.
@@ -124,8 +109,7 @@ The chat retrieval path applies the `IContentExclusionService` exclusion filter;
 
 1. **Security first:** rotate leaked keys; revert `appsettings*.json` to `env-var`; delete `.orig` / `.vscode` artifacts.
 2. **Migration item (a):** extract `IAnaSearchService` onto the MAF retrieval layer with exclusion-filter parity; re-point DI. This decouples the live MCP tools from Phase-4 deletions.
-3. **Parity check (c):** confirm `MessageContext` shape from the MAF non-streaming path.
-4. **Decide `AskAnaTool` (d).** If keeping: relocate triage (MAF Deviation 4), then re-point `AskAna` at `ICompleteChatService` (b), then fix the session leak.
-5. Housekeeping (e) and the minor items.
+3. **`ask_ana` (b):** done — deleted, so the MAF completion re-pointing and `MessageContext` parity check no longer apply to MCP.
+4. Housekeeping (e) and the minor items.
 
-After steps 1–2, the registered MCP tools (`list_clients`, `search_documents`, `fetch_document`) are safe to ship on the MAF flow independent of whether `ask_ana` is ever re-enabled.
+After steps 1–2, the registered MCP tools (`list_clients`, `search_documents`, `fetch_document`) are safe to ship on the MAF flow. They are the entire MCP surface now that `ask_ana` is removed.
