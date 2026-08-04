@@ -2,7 +2,9 @@
 
 Tenant ID: `e99365e9-089f-4355-a598-bd139993cd1e` (Altus Nova)
 
-All registrations are **shared across QA and Prod** — there are no environment-specific app registration IDs. Environment differences are handled via `ResourceUri` / redirect URI configuration.
+All registrations below are **shared across QA and Prod** — environment differences are handled via `ResourceUri` / redirect URI configuration.
+
+**Exception:** the voice API registrations (#6) are per-environment, deliberately. See [voice-backend-jwt-auth.md](voice-backend-jwt-auth.md) — a shared registration would make a QA token valid in prod, which defeats the point of validating the audience at all.
 
 ---
 
@@ -21,7 +23,7 @@ All registrations are **shared across QA and Prod** — there are no environment
 | Scope | Value | Scope `id` (GUID) | Consumers |
 |---|---|---|---|
 | `user-access` | `user-access` | `5ee826c9-46ab-441a-9ec7-52bb99bed16b` | Ana FE (MSAL login) |
-| `Mcp.invoke` | `Mcp.invoke` | `3b3e9efa-0089-4847-91ac-3045e4bc3416` | Ana MCP - Claude Client |
+| `Mcp.Invoke` | `Mcp.Invoke` | `3b3e9efa-0089-4847-91ac-3045e4bc3416` | Ana MCP - Claude Client |
 
 The full scope string a client requests is `<App ID URI>/<value>` — e.g. `api://4279cecc-.../user-access` or `https://ana-api-qa.engineering.altusnova.com/mcp/user-access`. Both resolve to the same scope; the issued token's `scp` claim is just the value (`user-access`). Other registrations reference these scopes by the GUID `id`, not the string.
 
@@ -30,7 +32,7 @@ The full scope string a client requests is `<App ID URI>/<value>` — e.g. `api:
 | Client | Scope | Consent prompt? |
 |---|---|---|
 | Ana FE (`d341df90-...`) | `user-access` | **No** — pre-authorized, so FE users are never prompted |
-| Ana MCP - Claude Client (`61e3c182-...`) | `Mcp.invoke` | **Yes** — *not* pre-authorized; Claude users hit the interactive consent screen (by design for the MCP OAuth flow) |
+| Ana MCP - Claude Client (`61e3c182-...`) | `Mcp.Invoke` | **Yes** — *not* pre-authorized; Claude users hit the interactive consent screen (by design for the MCP OAuth flow) |
 
 **App ID URIs registered** (required for Azure AD to accept `resource=` in token requests):
 
@@ -87,7 +89,7 @@ Voice FE deploys to Static Web Apps `ai-assistant-voice-qa-fe` / `ai-assistant-v
 
 | API | Scope | Purpose |
 |---|---|---|
-| AiAssistantApi | `Mcp.invoke` | Invoke Ana MCP tools |
+| AiAssistantApi | `Mcp.Invoke` | Invoke Ana MCP tools |
 | Microsoft Graph | `User.Read` | Sign in and read user profile |
 
 **Redirect URIs:**
@@ -129,6 +131,31 @@ Voice FE deploys to Static Web Apps `ai-assistant-voice-qa-fe` / `ai-assistant-v
 
 ---
 
+### 6. ANA Voice API — Resource Server (per environment)
+
+> **QA created 2026-07-21; Prod not yet.** The voice backend validates against these; until a registration exists and its ID is in the matching variable group, that environment cannot authenticate and the backend will not start. See [voice-backend-jwt-auth.md](voice-backend-jwt-auth.md).
+
+Unlike every other registration here, this one is **split per environment** — a shared registration would make a QA-issued token valid against prod, which would defeat validating the audience.
+
+| Field | QA | Prod |
+|---|---|---|
+| Display name | `ANA Voice API - QA` | `ANA Voice API - Prod` |
+| Client ID | `31d01534-0ff9-405f-bfca-1460fea69efc` | _to be created_ |
+| Application ID URI | `api://31d01534-0ff9-405f-bfca-1460fea69efc` | `api://<prod-client-id>` |
+| Role | JWT bearer resource — validates tokens on the voice Socket.IO handshake | same |
+
+**Exposed scope:** `Voice.Access` (both environments). Application ID URI: accept the portal default `api://<client-id>` — a custom-domain URI would need domain verification.
+
+**Manifest: `api.requestedAccessTokenVersion` must be `2`** (named `accessTokenAcceptedVersion` in the older AAD manifest format; the portal now shows the Microsoft Graph format). The default `null` issues v1 access tokens whose `iss` is `https://sts.windows.net/{tid}/`; the voice backend validates the v2 issuer `https://login.microsoftonline.com/{tid}/v2.0` and rejects everything otherwise. The two versions also differ in `aud` — v1 carries the App ID URI, v2 the bare client ID — so `EntraTokenService` accepts both forms.
+
+**Pre-authorized client applications:** Ana FE (`d341df90-…`) for `Voice.Access` in both — the voice FE shares that SPA registration (see #2), so pre-authorizing suppresses the consent prompt.
+
+The FE therefore acquires **two** tokens: `user-access` on `4279cecc` for the main ANA REST API, and `Voice.Access` on the voice registration for the socket. MSAL cannot combine two resources into one access token.
+
+**Config reference:** `altus-ai-assistant-voice/be` → `VOICE_API_AUDIENCE` / `VOICE_API_REQUIRED_SCOPE` / `AZURE_TENANT_ID`; `altus-ai-assistant-voice/fe` → `VITE_VOICE_API_SCOPE`
+
+---
+
 ## MCP OAuth Flow
 
 When Claude.ai or Claude Desktop connects to Ana's MCP endpoint, the OAuth sequence is:
@@ -139,21 +166,21 @@ MCP Client (Claude)
   ├─ GET {mcp-server-url}/.well-known/oauth-protected-resource
   │     → resource: <McpSettings:ResourceUri>
   │     → authorization_servers: ["https://login.microsoftonline.com/{tenant}/v2.0"]
-  │     → scopes_supported: ["api://4279cecc-.../Mcp.invoke"]
+  │     → scopes_supported: ["api://4279cecc-.../Mcp.Invoke"]
   │
   ├─ Redirect user to Azure AD authorize endpoint
   │     client_id = 61e3c182-...  (Ana MCP - Claude Client)
-  │     scope     = api://4279cecc-.../Mcp.invoke
+  │     scope     = api://4279cecc-.../Mcp.Invoke
   │     redirect_uri = https://claude.ai/api/mcp/auth_callback  (or localhost variant)
   │
   ├─ Exchange auth code for token (PKCE)
   │     → Azure AD returns access token
   │     → token audience: api://4279cecc-...
-  │     → token scp claim: Mcp.invoke
+  │     → token scp claim: Mcp.Invoke
   │
   └─ Call MCP server with Bearer token
         → API validates via AzureAdApi registration (4279cecc-...)
-        → McpInvoke policy checks scp == "Mcp.invoke"
+        → McpInvoke policy checks scp == "Mcp.Invoke"
 ```
 
 **Implementation refs:**
