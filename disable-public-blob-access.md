@@ -233,12 +233,14 @@ Then exercise, per environment:
 
 ## 7. Adjacent decisions
 
-- **Content images.** The images container in
-  [content-image-indexing-design.md](./chat-image-attachments-design.md) (and the
-  chat attachments container) must be created with `PublicAccessType.None` from
-  day one, outside `CreateContainer`. Do not add new public surface while the
-  existing surface is being unwound. Both designs already assume the read-back
-  endpoint from step 2 exists, so building it once serves three features.
+- **Content images.** [content-image-indexing-design.md](./content-image-indexing-design.md)
+  stores images extracted from documents in the client's content container, next to
+  their source document (`{documentPath}.images/…`). They inherit the container's
+  access level: public today, private after step 5, with no extra work. Because they
+  are visible in the file tree, the FE image preview must move to the step 2 read-back
+  endpoint along with the other previews. Answer-time access already uses SAS links.
+- **Chat attachments.** The chat image container is separate and is already created
+  with `PublicAccessType.None`, outside `CreateContainer`.
 - **New instance.** The Terraform currently provisions the new environment with
   the same public posture. If the flip is going to happen, doing it *before* the
   new instance carries data is materially cheaper than after — step 5.2 shrinks to

@@ -4,9 +4,33 @@
 
 **Scope:** primary backend ([altus-ai-assistant](../altus-ai-assistant/)) and primary frontend ([altus-ai-assistant-fe](../altus-ai-assistant-fe/)). The voice stack is out of scope.
 
+## First iteration: backend and text answers (2026-09-28)
+
+Implement the backend only. All questions have host-assigned IDs and `answerKind: "freeText"`;
+choice options and yes/no controls are deferred. Keep the existing AskUser string-array tool
+contract: the host adds IDs and answer kinds. The API-owned contract and implementation plan
+are in `altus-ai-assistant/specs/structured-clarification-questions/`.
+
+Use a nullable `clarification` envelope with either `ask` (assistant turn) or `reply` (user turn) populated on
+chat response DTOs and in one nullable JSON column. `CompleteChatDto.clarificationReply`
+accepts `answeredMessageId`, `answers` (`questionId`, `text`), `skipped`, and `additionalNote` —
+the user's own words, alongside or instead of the per-question answers, so users can add
+instructions or answer everything in one field.
+Render canonical user text on the server, ignoring `userMessage` when this payload is present.
+Only the latest active conversational message can be answered; reject invalid, cross-session,
+or stale message references before saving a turn. Unknown question IDs and blank answers are
+ignored; duplicate IDs use the first nonblank answer. Partial and empty answers are allowed.
+Skip discards submitted answers, keeps the additional note, and disables AskUser for this turn
+in both completion paths.
+
+Limits: 10 questions, 2,000 characters per question/restatement, and 8,000 characters per
+answer. These are safety bounds; the existing prompt still controls the preferred count.
+The ambiguity prompt tells the model never to add a "continue without clarification" question; this ships
+together with the frontend Skip button, per the rollout guidance below. Existing clients keep getting the plain text in the response message.
+
 ## Purpose
 
-When the assistant needs clarification it calls [AskUser](../altus-ai-assistant/AltusAiAssistantApi/Services/Maf/AskUserTool.cs), which already receives a *structured* payload — a restatement plus a list of questions. The host immediately flattens that payload into markdown ([`ClarifyRequest.ToMarkdown`](../altus-ai-assistant/AltusAiAssistantApi/Services/Maf/AgenticWorkflowTypes.cs)) and persists it as an ordinary assistant message, so the frontend receives an opaque blob of text.
+When the assistant needs clarification it calls [AskUser](../altus-ai-assistant/AltusAiAssistantApi/Services/Maf/AskUserTool.cs), which already receives a *structured* payload — a restatement plus a list of questions. The host immediately flattens that payload into markdown ([`ClarificationAsk.ToMarkdown`](../altus-ai-assistant/AltusAiAssistantApi/Services/Maf/AgenticWorkflowTypes.cs)) and persists it as an ordinary assistant message, so the frontend receives an opaque blob of text.
 
 Two consequences:
 
@@ -19,14 +43,14 @@ This design keeps the clarification payload structured all the way from the tool
 
 1. **Structure travels; text remains the source of truth for the model.** The model always produced and always consumes plain text. The structured payload is an additional, parallel representation used for display and input collection. The rendered text stays on the message so history building ([`ChatTurnStore.BuildHistory`](../altus-ai-assistant/AltusAiAssistantApi/Services/Maf/ChatTurnStore.cs)) and the prompt contract are untouched.
 2. **The host owns the affordances, the model owns the questions.** Skip, "other/free text", and answer formatting are host concerns. The model is only asked for what it genuinely needs to know.
-3. **One shape for live and restored turns.** Whatever the FE gets from `CompleteChat` and over SignalR is exactly what it gets from `RestoreSession`. A page reload must not degrade a rich card into markdown.
+3. **One shape for live and restored turns.** Whatever the FE gets from `CompleteChat` is exactly what it gets from `RestoreSession`. A page reload must not degrade a rich card into markdown.
 4. **Degrade gracefully.** Every structured field is optional. A message without a structured payload — every message written before this change — still renders from its text.
 
 ## Model of a clarification
 
 Two payloads, one per direction.
 
-**Clarification request** (assistant → user), an evolution of today's `ClarifyRequest`:
+**Clarification ask** (assistant → user), an evolution of the internal `ClarificationAsk` record:
 
 | Element | Purpose |
 | --- | --- |
@@ -35,7 +59,7 @@ Two payloads, one per direction.
 | Answer kind | Free text, single choice, or multiple choice. Drives the control the FE renders. |
 | Options | Suggested answers for a choice question, each with an id and a label. Always accompanied by a free-text escape in the UI. |
 
-**Clarification response** (user → assistant):
+**Clarification reply** (user → assistant):
 
 | Element | Purpose |
 | --- | --- |
@@ -47,9 +71,9 @@ The "skip" instruction is removed from `ambiguity.prompt`; the model is told to 
 
 ## Storage
 
-**Principle: the clarification is not a new kind of record. It is extra structure attached to an existing chat message.** A clarification request *is* the assistant turn; a clarification answer *is* the next user turn. Modelling them as separate entities would duplicate ordering, session ownership, soft-delete and audit that `ChatMessage` already carries, and would fork the restore path.
+**Principle: the clarification is not a new kind of record. It is extra structure attached to an existing chat message.** A clarification ask *is* the assistant turn; a clarification reply *is* the next user turn. Modelling them as separate entities would duplicate ordering, session ownership, soft-delete and audit that `ChatMessage` already carries, and would fork the restore path.
 
-So: **one nullable JSON column on `ChatMessage`**, holding the request payload on assistant rows and the response payload on user rows. `Message` continues to hold the rendered text for both.
+So: **one nullable JSON column on `ChatMessage`**, holding the ask payload on assistant rows and the reply payload on user rows. `Message` continues to hold the rendered text for both.
 
 Why a JSON column rather than normalized question/option/answer tables:
 
@@ -62,7 +86,7 @@ If clarification analytics are wanted later (how often users skip, which questio
 Practical points:
 
 - Store the *rendered* text alongside the structure, as now. The model and any consumer that does not understand the payload keep working, and old rows need no backfill — a null column means "text only".
-- Persist the answered-message id inside the response payload rather than reusing `ParentMessageId`, which already means "curated message" on `ChatMessage`.
+- Persist the answered-message id inside the reply payload rather than reusing `ParentMessageId`, which already means "curated message" on `ChatMessage`.
 - Treat the payload as untrusted-but-owned data: it is written by the host after normalization, never by the client verbatim.
 
 ## Flow
@@ -77,12 +101,12 @@ sequenceDiagram
     FE->>API: CompleteChat (user message)
     API->>Tool: model calls AskUser (restatement, questions)
     Tool-->>API: clarification on run context, loop terminated
-    API->>DB: assistant message = rendered text + request payload
-    API-->>FE: SignalR clarification event + ChatResponseDto.clarification
+    API->>DB: assistant message = rendered text + ask payload
+    API-->>FE: ChatResponseDto.clarification
     FE->>FE: render question card (+ Skip button)
     FE->>API: CompleteChat (answers payload)
     API->>API: render answers to canonical text
-    API->>DB: user message = rendered text + response payload
+    API->>DB: user message = rendered text + reply payload
     API->>API: run the turn (AskUser withheld if skipped)
     API-->>FE: answer
 ```
@@ -90,7 +114,7 @@ sequenceDiagram
 Stage by stage:
 
 1. **Ask.** `AskUser` stores the structured clarification on the run context and terminates the loop, exactly as today. `CompleteWithClarification` persists the assistant message with both the rendered text and the structured payload.
-2. **Deliver.** `ChatResponseDto` gains an optional `clarification` object. Over SignalR, a dedicated clarification event carries the same object, so the FE can swap the streamed placeholder for the card before `StreamCompleted` arrives. The existing text chunk keeps being sent for clients that do not handle the new event.
+2. **Deliver.** `ChatResponseDto` gains an optional `clarification` object. Over SignalR only `StreamCompleted` is sent: the markdown questions are not streamed as a text chunk, so a client that renders streamed text never shows them before the card. There is no dedicated SignalR clarification event: it could only be sent after the message is saved, moments before the HTTP response carrying the same object, so it would not show the card any sooner.
 3. **Render.** The FE renders a question card in place of the plain assistant bubble: restatement on top, one control per question, a Skip button, and a single submit. Questions with options render as chips/radios/checkboxes with a free-text fallback; questions without options render as text fields.
 4. **Answer.** The FE submits through the existing `CompleteChat` endpoint with a new optional answers payload on `CompleteChatDto`. **The server renders the answers into the user message text** — a deterministic question/answer transcript — rather than trusting the FE to compose prose. This keeps one formatting authority and keeps model history readable.
 5. **Skip.** Skip submits the same payload with the skip flag and no answers. The server renders a canonical "proceed without further clarification" message *and* withholds the `AskUser` tool for that turn, so the instruction is enforced structurally rather than hoped for through prompting. That is a behavioural improvement over today, where the model may ask again anyway.
@@ -106,12 +130,12 @@ Normalization stays where it is today, in the clarification payload type, and gr
 
 ## Compatibility and rollout
 
-- The column, the DTO field and the SignalR event are all additive. A backend deployed ahead of the frontend behaves exactly as today, because the rendered text is still present and still streamed.
+- The column and the DTO field are both additive. A backend deployed ahead of the frontend behaves exactly as today, because the rendered text is still present in the response.
 - The FE detects the payload and falls back to markdown when it is absent, so historical messages and any non-updated client keep working. No backfill.
 - Prompt changes (dropping the invented fourth question) should ship with the FE that has the Skip button, otherwise users lose the escape hatch for one release.
 
 ## Out of scope
 
-- Durable workflow checkpoints and resuming an agentic run after a clarification reply — covered by [agentic reflection and checkpoints](workflow/agentic-reflection-and-checkpoints-design.md). This design is compatible with it: a structured clarification request/response pair is precisely what a checkpointed pause and resume would carry.
+- Durable workflow checkpoints and resuming an agentic run after a clarification reply — covered by [agentic reflection and checkpoints](workflow/agentic-reflection-and-checkpoints-design.md). This design is compatible with it: a structured clarification ask/reply pair is precisely what a checkpointed pause and resume would carry.
 - Clarification in the voice stack.
 - Analytics on clarification usage.
