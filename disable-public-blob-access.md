@@ -233,7 +233,7 @@ Then exercise, per environment:
 
 ## 7. Adjacent decisions
 
-- **Content images.** [content-image-indexing-design.md](./content-image-indexing-design.md)
+- **Content images.** [The content image design](../altus-ai-assistant/specs/content-image-indexing-iteration-1/design.md)
   stores images extracted from documents in the client's content container, next to
   their source document (`{documentPath}.images/…`). They inherit the container's
   access level: public today, private after step 5, with no extra work. Because they

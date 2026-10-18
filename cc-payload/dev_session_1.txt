@@ -1,0 +1,1110 @@
+CuttleCode + Altus Nova Team AI Working Sessions
+
+Date: 10/14/2026, 7:57:50 PM • Duration: 2h 22m
+
+Participants: gbcalegari, Chris Naso, Puru Agrawal, Adam McKinstrie, Stas Skorobogach, Joey Williams, Alex Chernov, Igor Kostyrko
+
+Grain URL: https://grain.com/share/recording/7952498c-3628-468d-ac72-52938caf552f/HmMQ7wujfh5STSsRNJncjr8Qam9yst9PnorWgshE
+
+--- TRANSCRIPT ---
+
+gbcalegari
+Hey, Chris.
+
+Chris Naso
+What's up?
+
+gbcalegari
+Hey, I, I've been like playing around and doing the whole process using an agent and designing Figma. Yeah, from like I simulated some revisions on designs and the changes and how to save it.
+
+Chris Naso
+And using— what have you been primarily using? You've been doing Claude?
+
+gbcalegari
+No, I've been using Claude. Yeah.
+
+Chris Naso
+Okay. Yeah.
+
+gbcalegari
+It's already connected. It's plugged in. I just prompt it. It builds things in Figma. I did the revision process, everything. There are some things that I need to do manually. But I can try and speed up my process by creating a plugin or something that— something that Claude itself told me that we can do.
+
+Chris Naso
+Interesting.
+
+gbcalegari
+Yeah, very interesting. Yes.
+
+Chris Naso
+What do you need the plugin for?
+
+gbcalegari
+So one of the things that I'm doing is, like, saving a version whenever we have something, like, stable. So this is the version 1. And currently, you can't create versions. Using MCP or web API. There are a bunch of feature requests in Figma forums for it, but no updates so far. So, if I create a plugin, the agent also can't access the plugin, but at least I can expedite filling in the information and saving it. So, I couldn't go into the specifics, apply, but it's very interesting.
+
+Chris Naso
+Cool. And just a heads up to you and Alex, FYI to you as well, I took today's conversation and I've, I made a couple modifications to the, the both the brief and the requirements and intents pages in Confluence. So just a heads up, and I don't think it's absolutely critical for this conversation today, but you're gonna have a review work stream request in your Nimblist instance. Gustavo, if you haven't done it yet, it's in the production instance that I sent an invite over for yesterday.
+
+gbcalegari
+Oh, okay. Yeah, I was about to ask it. I tried to log in, but I have the QA environment, so I will create my account and do it. Okay, cool.
+
+Puru Agrawal
+We invite Alex Nanai to this.
+
+Chris Naso
+He is on the invite. He did not respond to it.
+
+Adam McKinstrie
+I did, Peru. I was just sending you a Slack. So I talked with Alex. I shared with him the second cuddle code recording. He, he does want the recording of this. He just wasn't able to make it.
+
+Puru Agrawal
+Okay. I guess we should ping Joey.
+
+Chris Naso
+Doing that now. Okay.
+
+Adam McKinstrie
+Has anyone ever eaten cuttlefish?
+
+Puru Agrawal
+Aren't cuttlefish like jellyfish or no?
+
+Stas Skorobogach
+No, they're like squid. I like it. It's good.
+
+Adam McKinstrie
+Yeah. I know Gustavo eats cuttlefish. He has a cuttlefish farm.
+
+gbcalegari
+Yeah, I, I think I, I had it in Portugal and I think they called it chocos. It's a cool name, choco.
+
+Adam McKinstrie
+So I went to an Italian restaurant recently and they're, uh, they, they had this, it's called like de mare, of the sea dish. And, and the waiter was Italian and I asked him, I said, hey, do you have— there's no scungille in it. And he's like, what is scungille? And I'm like, are you sure you're Italian? So scungille is conch, but you can get, you can get scungille in like a tuna can or a tin. And put it in pasta. It's pretty good. I like it.
+
+Puru Agrawal
+Hey, so we had gone through this morning and set up subscriptions for Claude and Codex, and I think you guys should have all received invites to those subscriptions. And so did anybody have trouble getting those set up?
+
+Adam McKinstrie
+No, I'm all set up.
+
+Puru Agrawal
+Okay.
+
+Adam McKinstrie
+On both. We just need to set up the, the projects and make sure that the right people are in the projects. So if there's an Anna project, and make sure everybody has access to the Anna project.
+
+Puru Agrawal
+Are those projects that are shared across the team? I didn't see anything in the setup that seemed like it had team-wide projects. It seemed like you're just able to manage the individual seats, but— Right.
+
+Adam McKinstrie
+So yeah, so I know in Claude you can do this. I'm not sure in ChatGPT.
+
+Stas Skorobogach
+So you mean workspaces or— Well,
+
+Adam McKinstrie
+if just as an example, if I'm working on Anna and there's— oh, Joey's on— team members, I want those team members to have access to the stuff that I'm working on, that context. Hey, Joey.
+
+Puru Agrawal
+Hey, Joey.
+
+Adam McKinstrie
+Hello.
+
+Chris Naso
+All right. So Joey, we got a broader part of the team on the call. Basically, it's a mix of kind of product, myself and Adam, and then some of the, you know, technology guys, Alex and Igor, both developers that are gonna be interacting quite a bit with, with cuddle code, and obviously, you know, Stas and Puru. So A couple of things for, for today, Joey. So what we've done behind the scenes over the past 3 or 4 days is we've kind of aligned on what we think is probably a good test for us as we experiment with Cuddle Code and understand kind of its capabilities and how to best utilize it. You know, we had the idea of advancing some of our product development around this Team AI solution, and one of the things that we're looking to do is integrate Figma and the overall workflow around how we'd collaborate with a designer in producing designs using contacts from Anna, using the work stream kind of workflows that we've established in Team AI to assign kind of work to individuals and have them evaluate and provide feedback, etc., being able to do that in Team AI. So we put together just some documentation internally, largely leveraging Team AI and other solutions to kind of document the approach. But what we wanted to do today is use kind of today's conversation to get especially the technical guys up to speed on cuddle code and make sure that we're setting up this environment correctly, kind of planning on how we're going to take these kind of high-level requirements or intents and configure cuddle code correctly to be able to execute off that. So that's kind of what we wanted to walk through today with you and just get your feedback. Use today as kind of a working session. Alex, I don't know if it makes sense for you to share your screen as we do a lot of the setup and Joey can just kind of point and we can fill in the gaps with business requirements, intents, etc. But use today largely for that, just setup and planning. Tomorrow is kind of hands-on experimentation. We'll take that offline and then we'll reconvene Friday and just kind of review, you know, what, what has happened over the past 24 to 48 hours and discuss any type of, you know, questions that we have surfaced, any lessons that we've learned, and give you a chance to kind of guide us and provide some feedback on how we could get some better results out of whatever we're initially trying to do. Kind of use this as a, you know, 2, 3-day working session. Maybe if we need to carry over into next week, that's fine too. But that's, that's the main intent. Does that make sense?
+
+Joey Williams
+Yeah, that's good.
+
+Chris Naso
+Okay.
+
+Puru Agrawal
+Also, one more thing. So I don't know if Adam Haynes, uh, has coordinated with you on this, but we would love to come out there if you're around. I think you're near Beaumont, right, Joey?
+
+Joey Williams
+Yeah, I'm in, I'm in Lumberton, which is like 10 minutes north of Beaumont.
+
+Puru Agrawal
+Okay, and so Jason, who's my business partner, and I were thinking that we come out there on Tuesday the 20th if you're around, and maybe we could spend some time with you and Alex. Is the third gentleman also in that same area, or is he in a different area?
+
+Joey Williams
+Uh, Chad, he's in The Woodlands. Um, Alex is also up in Spring, Texas.
+
+Puru Agrawal
+Um, so Like, is there a place where maybe all 3 of us could meet?
+
+Joey Williams
+Yeah, I think in Austin could work out well.
+
+Puru Agrawal
+Austin?
+
+Joey Williams
+Yeah, because I mean, I try to go up to— I mean, is that— would that work for you guys?
+
+Puru Agrawal
+I mean, Austin would be great.
+
+Joey Williams
+Yeah, yeah, yeah.
+
+Puru Agrawal
+We were just gonna— we thought it'd be easier for you guys if we came out to Houston or Beaumont.
+
+Joey Williams
+Well, I mean, I have kids and they're crazy, so I work at the house and yeah, so I mean, I would love to have a
+
+Puru Agrawal
+coworking space, right, that we could come out there and spend a day in, or maybe just go out to a long lunch together.
+
+Adam McKinstrie
+I think maybe Joey's saying, hey, it'd be good to get out.
+
+Joey Williams
+Yeah. So I go up to FSG, um, about every 6 to 8 weeks anyways, and that, that time is kind of becoming due. So it kind of just works out.
+
+Puru Agrawal
+Does that also work for Chad and Alex?
+
+Joey Williams
+Uh, Alex often comes up with me, um, just to hang out with the FSG crew. Uh, Chad hasn't yet, but I already touched base with him and he said he'd be, he'd be free.
+
+Puru Agrawal
+So do you think the 20th works? Because right now I have flights to fly out to Houston on the 20th. I can change them to fly to Austin.
+
+Joey Williams
+Yeah, I, I can commit to being in Austin on the 20th.
+
+Puru Agrawal
+Okay. I mean, what about the other 2 guys?
+
+Joey Williams
+Um, Alex, I don't anticipate having any issue. I'm about to message him now. And okay, Chad, uh, I mean, I'll message him as well, but he— Chad is a very, very, very busy dude. So, uh, if he can or can't make it, um, I don't think it should have like really much impact on our conversations.
+
+Puru Agrawal
+Okay. Yeah, if you could let me know today, that would be great, because if I need to switch my flights to just go straight to Austin, I can do that.
+
+Joey Williams
+Okay.
+
+Puru Agrawal
+Great. Okay, sorry. So Alex, we were about to turn it over to you.
+
+Chris Naso
+Maybe the best thing we could do, Alex, is just let's pull up CuddleCode and we can talk through setting this up for the first time and just do a broader walkthrough together.
+
+Alex Chernov
+Okay, one sec, let me share my screen.
+
+Joey Williams
+So I already have— it's a lot of intents.
+
+Alex Chernov
+Yeah, a lot of intents. And one of the UX issues that it's a bit hard to understand, like, in which intent you are working and which intent is active, like, at the moment, as it can stay, like, in a different position in list. Yeah. So when I started a new intent, it appears, like, at the middle of the list, like, yeah. Here, not at the end or at the beginning.
+
+Chris Naso
+Alex, just out of curiosity, these intents, this session, it's, it's unrelated to kind of the what we're looking to explore.
+
+Alex Chernov
+Yeah, yeah, yeah, yeah, yeah.
+
+Chris Naso
+So what were you playing around with in this? What are we, what are we effectively looking at? This was just experimentation and trying to get used to how the overall solution works.
+
+Alex Chernov
+Yeah, yeah, it's just an ex— my experiments and I have some question to Jerry, as during my tests, uh, I saw the different behaviors, how like the working session decides what like, uh, what kind of sessions will be spawned. Yeah, so like, uh, for one intent, uh, the working session spawns, uh, like, not the working, like the chat session, uh, spawns the working session. Yeah, for another intent, uh, chat session spawns Ralph loops. Yeah. For Summit, BGraph was spawned. And my question is, like, how, like, this decision was made, like, which type of, like, executor should be spawned?
+
+Joey Williams
+Right. Yeah. So, if you have Jev configured, or if you don't have Jev configured, it'll use, like, Haiku or Or Luna or something, whatever you have there. But basically it looks at the plan in the background and it determines what sort of implementation route it should take based on the plan. And if you don't give it any direction, that's the route it takes. So it'll do a big RALF or RALF loop, or it'll do fan-out loops, or it'll do graph engineering. Like it knows how to do all of that. Depending on how the plan was created. So for instance, if you have an intent where the plan was created and there's like 20 sequential iterations of what needs to be done, it's probably going to do a big RALF. But if it's like maybe 5 iterations that need to be handled sequentially, that's small enough to where it would use a RALF loop. But if, if it comes up with a plan that's like, hey, we need, you know, 3— this is like 3 different responsibilities under this one intent, and we need to concurrently work on all 3 of these tasks, it's either going to do loop fanouts or it's going to do a graph engineering approach. I've even seen it make its own pipelines in Cuttlecode. And execute the pipelines from there. But this is all if you are not explicit in how you want it to implement. This is when you let it figure out how it wants to handle implementation. Does that— did that answer your question?
+
+Alex Chernov
+I think yes. Okay.
+
+Joey Williams
+Yeah, I will say just like this, don't read too much into this. But I've never— you are the first person that I've ever seen that has had this many intents going on at once. And I would be curious and seeing if the intention behind how you're using intents matches how we were intending it for it to work.
+
+Chris Naso
+Yeah.
+
+Joey Williams
+Um, but I mean, just because, just because I'm— it's not our intention or whatever, that doesn't necessarily mean you're using it wrong. Everyone can kind of use it however they want.
+
+Puru Agrawal
+But, uh, just on that point, like, what wasn't clear to me in terms of the best way to kind of get the value out of the pilot is Should we be saying like, hey, look, here's something we'd like to do, and then Joy walk through with you like setting it up from start to end and then talking through the techniques that you would recommend that we go through? Obviously, we don't know the tool and you don't know Team AI, and so there'd be a lot of conversation there. But, you know, it seems like that might give us one perspective, which is just kind of, hey, here's a fresh set of thoughts from somebody who really understands this way of working and how we'd go about trying to do something. And then a different piece would be, hey, here's what we've tried to do, right? My thought was, and I'm just throwing this out there because maybe this is not the right way to do it, right? But like, we use today's session for us to present, hey, here's what we're trying to solve for. And then have you talk us through what we'd want to go and do, then we're spending the rest of today, all of tomorrow, kind of working on that. And on Friday we can come back and say, okay, so here's what we've been doing, here's the things we're stuck on, here's what's working, here's what's not, and then get feedback from you on, well, you should have done this a different way or something.
+
+Joey Williams
+Sure. Yeah. Um, There is kind of a— so Team AI is a web app, right? It's an Electron app or, or of a, of that variety?
+
+Alex Chernov
+Uh, it's a web app and, uh, like it runs, uh, it's running inside a Nimbalist, but Nimbalist runs inside an Electron browser.
+
+Joey Williams
+Okay, so, um, there's kind of a universal step 1 that, that kind of applies to basically all projects. Really, web apps fit this pretty well, and that's getting your, like, your feature implementer agent set up, which is the one you basically should have one agent that knows how to do the implementation, that knows how to spin up the environment through Playwright or through computer use, or, you know, basically it needs to know how to test the changes that it's making visually and then confirm those changes visually. And then you can also have it include those videos inside of the PR. That way, whoever is doing the QA, they look at the PR, they can have a preview link that they can click on, but they can also just click on the video in GitHub and just straight up see, oh yeah, this XYZ change is working properly. And once you, once you have your feature implementer agent configured, that makes everything going forward much easier. So all of your intents, When it's doing the working session, it will always use your feature implementer agent. Does it have— and I guess to continue with that is, have we done that here? Like, did you start a session and create an agent that knows how to do from implementation to testing all the way through?
+
+Alex Chernov
+No.
+
+Joey Williams
+Okay.
+
+Alex Chernov
+So that's just playing around like functionality here so I can set up. I wasn't completed.
+
+Joey Williams
+Okay, you're good. Can you go to your projects? I want to look at your project for, for this. Okay, so we got Team AI. Can you click in there real quick? I see you got 7 repos. And these are all the repos related to Team AI. Do you need Anna in any capacity here? Like, would it need to have context of Anna when working on Team AI?
+
+Alex Chernov
+You mean Anna as an MCP connection or Anna as a, like, source repository?
+
+Joey Williams
+Really both, both. Like if you're ever wanting to work on Team AI and concurrently you're like, for me to support this Team AI feature, Anna has to update as well. That means that in this project it needs to touch 2 code bases and it can, at the end, it can make 2 different PRs. But the way you want to think of projects in Cuddle Code is what, what am I working on? And that can spread across multiple repos.
+
+Alex Chernov
+Yeah, I already saw this as like it creates a pull request in different repositories, yeah, but one more issue is that we are storing our repos in Bitbucket, not in GitHub, and the KatalCode doesn't support like PR creation in Oh, in Bitbucket.
+
+Joey Williams
+I see. Okay, well, we can add that.
+
+Puru Agrawal
+But for now, we can just use Git, right?
+
+Joey Williams
+Yes. Yeah. Let me, let me write a note over here so I don't forget to do this.
+
+Puru Agrawal
+So I think let's just like maybe start a backlog of things, but let's not jump and go and implement things yet because we might identify a few different things. And then obviously you have other things you have going on also. And so we want to make sure that we're strategically using your time right for the most critical things. Okay.
+
+Joey Williams
+That makes sense. So how would you like to— where would you like to move the conversation towards?
+
+Alex Chernov
+I think, Chris, you can describe, like, what we have and what we want to build.
+
+Chris Naso
+Yeah, that's fair. I'm happy to kind of walk through high level what we're looking to build, and then I think ultimately we want to jump back through this. I think we have the repositories connected. I think it's just what is the rest of the setup there that's needed to kick things off. Let me take over on the screen share side. Give me one second. All right, should be up in a second. Let me know when you guys can see Figma.
+
+Joey Williams
+You're good.
+
+Chris Naso
+All right, it's good now. So Gustavo from the design side helped put this together. We have a couple different views. Ultimately, so just as high-level overview, again, we're primarily using Niblis today as the primary kind of UI and kind of the client, the agent management solution. Team AI here is what's handling the broader kind of configuration, the approval process, the connection to various MCPs. And so what we've talked through is we have a variety of different systems that we can connect to using Team AI into our broader kind of overall flow. The gap that we have today is Figma. Figma is not part of that workflow. And so what we're thinking is integrating Figma into this workflow. And the way it'll work is as part of the normal Team AI artifact creation process where product and the product team is working together to define these types of business artifacts that are gonna describe what are we building? Why are we building it? How is it gonna work? What is it gonna look like? There are gonna be these briefs that we are producing for the, for the product on a per-feature basis. And those briefs are gonna give the designer a better understanding of, okay, what are we trying to accomplish? What are the important characteristics from a look and feel perspective, etc.? All of this that I'm talking about right now doesn't have to do anything with this Cuddle Code demo just yet. So this is all stuff that we'd support as part of The natural Team AI process. But once these briefs are in place, and once the designer has reviewed these briefs, they're gonna want to start to do their work. And so the idea here is that there's this broader kind of conventions, README files. file that shows kind of overall how we're going to use this content to support development. But the designer will be able to identify a Figma file to be using through this kind of iterative design process. Maybe we'll cut a branch and we'll go through and we'll start the design process. That design work could happen directly in Figma. That design work could happen in Claude where there's an agent or there's an MCP connection. And you can use the Claude agent to modify Figma directly, or it could happen in Team AI and Nimblist, where we're using the broader context of Anna and the tool to do something very similar. We'd leverage our Claude agent or our Codex agent, whatever, to be able to make those design changes. And as those design updates are made, you can see it in Figma. Figma is, you know, seen in the Nimblist view as well. Once the designer's set, they're gonna propose updates, and we're gonna review them together as a team through this type of review process. Ultimately, when everybody is aligned and we've signed off, there's gonna be a handoff that's made where we say, great, these designs are now final. We'd update the main branch if we'd done branching at Figma to make sure that the Figma site is updated. And then as part of this final handoff, there's gonna be a package of files that are created that design would hand off to the development team to support the agent-driven development process. So we'd have CSS files, we'd have screen markdown files that are describing the various scenes, we're having different files for icons, etc. So the entire kind of design package and the early foundation for what developers would need to turn these designs into working code, a lot of that is being produced as an output of this handoff that happens. So what we're largely looking to do is that as part of this, you know, test with cuddle code is integrate Figma into these workflows, create a designated work stream around the Figma process that supports some aspect of great making sure that we're working off of the right Figma file. Making sure that we can modify that Figma file through different interaction points, making sure that we can, you know, make updates in the MCP. Potentially, we have to use the Figma API as well. Capturing this, this overall kind of review and approval process. If there's feedback that individuals have left, making sure that we can incorporate feedback into the process specific to Figma. Like if comments are being left in Figma, making sure that those are included as part of the review process. And then ultimately figure out how we want to handle this publishing process back to the main branch and the generation of all these files as an output of the handoff that would happen through this work stream. So from a simple perspective, here's another outline that Alex was, was kind enough to create. You know, this is again before what we're talking about here, but we have this design brief that's created and, and is handed over to the designer to review. The designer then starts their work stream. Maybe there's, they're doing this directly in, in Figma, whatever it might be. They're picking the file, they've got the brief, and they start to work with their work, work to file process. They're creating a branch, and then they're selecting it in Figma to work off of that branch. And now we've, we've connected that branch to Team AI, we've had access to the branch through Nimblist, then we start to edit that file directly using our agent, using the context, etc. At the end of this, through this kind of iterative design process, there's a proposal that's being created and sent off to reviewers. That's all being done in Team AI. That's then sent off to the reviewers to evaluate this. Again, maybe they're doing this in, in Figma, maybe they're doing this in the Nimblist panel, whatever it might be, but they're reviewing the documentation, leaving comments though, and any type of feedback for the designer would all happen in the Nimblist panel. Once that's signed off, we'd merge the branch. The merge would be verified that everything is good and up to date in Figma. And then we have this handoff generation step where the system is kind of creating the final set of tokens and specs that the developers would need. And that would be published to a repository. Right now we've listed Git. Maybe we're just publishing this back to a Confluence page that has all of the Markdown files, etc. But that's the, that's the general flow of what we're looking at doing here. Does that make sense?
+
+Joey Williams
+Yeah, yeah, that, this is all good. Okay, so after the handoff, this is when it would be handed off over to the engineer to do the implementation?
+
+Chris Naso
+Yeah, so after this handoff is generated, we kind of finished our artifact process, right, for the most part. Now, you know, the business artifacts, your PRD, etc., all of that content, as well as the design information and the design output, is all part of the package that would ultimately be carried over to the cuddle code development process for our developers to work on.
+
+Joey Williams
+Okay.
+
+Puru Agrawal
+Yeah, you might have a technical architect who has a piece before development to the extent that there are like enterprise development standards and frameworks and tooling and whatever that have to be conformed to, right? And so if those policies and guidelines don't already exist, then we'd expect that a technical architect might also be using Team AI to create some of those specifications. And so that would also be fed into the development team alongside the functional requirements and the design specifications, right? But I mean, in a way, it's just numerous kinds of artifacts are being assembled. and then pulled together to hand over to the engineering team to incorporate into their specs.
+
+Joey Williams
+Right, okay.
+
+Chris Naso
+So ultimately what we have is, and this is again, I'm not sure what's going to be relevant for this experimentation process, but we have, you know, a loose PRD that kind of defines some of these requirements, and we've even gone as far as to kind of seed it with what we think might be some good initial intents that we could run to kind of set up this framework. But again, I think the idea was let's have this conversation first and decide with the objective understood, what's the best way to get cuddle code set up to support the development that we're looking to do here.
+
+Joey Williams
+Right. Okay. Okay. Are you ready for my comments? Yeah.
+
+Chris Naso
+Like, ready for your comments? Yeah, absolutely. So, Joe, I think this is kind of like, okay, guys, it's If I'm in your shoes, here's how I'd approach this. Here's how we'd set up cuddle code. Here's what we need from you guys to make sure that we can do this the right way. Let's set up X, Y, and Z. If we can do that here, great. If I need to take that offline, great. That's fine. We can work on that tomorrow. But yeah, just jump in with your thoughts on the best way to kind of get this seated in the cuddle code so we can, we can start to move. Okay.
+
+Joey Williams
+Real quick, let me ask this for, for Team AI. So this is what we're discussing here is the flow of Team AI after Team AI has this Figma review loop completed. Like that feature isn't, isn't there yet.
+
+Chris Naso
+The feature that we're looking to implement as part of this test is connecting Figma into the Team AI work stream, being able to select the right file, making sure that Team AI can write to Figma and then support the review process, evaluating Figma documents that are created, leaving feedback just like we do today, but making sure it works correctly with Figma. And then ultimately having this work stream produce a series of markdown files, CSS files, JSON files, etc., that the developers would ultimately need. Like none of that functionality exists today. The only integration that we largely have from a documentation creation perspective is Confluence. That's where we're able to create Confluence files, etc., but we haven't done any type of integration with any other types of sources just yet. So we wanted to test this out with Figma as kind of the next use case for us of how we incorporate our designers into the process. So the idea for us would be, can we use CuddleCode to kind of develop that Figma integration, which is probably pretty straightforward, but the overall work stream that incorporates Figma and the review process, etc., and the production of files at the end of it, can we use Cuddle Code to support the additional integrations and the work stream modifications for that?
+
+Joey Williams
+Okay. Yeah, that, that's basically where I was trying to get my question too. There's really like 2 different problems that you're trying to, trying to use Cuddle Code for here. It's the actual update to Team AI to add this new feature for Figma, and it's the process of using Cuddle Code after, after the features.
+
+Chris Naso
+Yeah. And frankly, I think that second one, I, I, at least I can only speak for myself. I'll understand that second one a little bit better as we go through this conversation of what is, what does Cuddle Code need just to start? What's the right way to build intents? What type of context does Cuddle Code need to be able to you know, understand the project, etc. Go ahead.
+
+Joey Williams
+So with an intent, you— I don't know if I've touched on this— you can have sub-intents within Cuddle Code. So the way I would approach this, I haven't used sub-intents too much. So if we— I'll just say if we run into issues with it, We may just have to spend some time, like I may have to spend some time on cuddle code to make sure sub intents work as we would all expect it to work. But how I would approach it personally is the intent, the high-level parent intent would be the big ask. It would have the high-level plan inside of its plan document. And then the sub intents would be split out into, oh, you're not when you were streaming, there was that one page that had cuddle code and intents, and then it looked like it had like 20 stories or so in that list.
+
+Chris Naso
+Yep.
+
+Joey Williams
+Yeah. Yes. Yeah. Well, I don't know where you were, but yeah.
+
+Chris Naso
+I mean, the intents are down here, right? This is, this is where we're kind of describing.
+
+Joey Williams
+Yeah. Yeah. Yeah.
+
+Chris Naso
+There we go.
+
+Joey Williams
+Yeah.
+
+Chris Naso
+So, but again, this was just generated. This was generated with not knowing anything, right? Largely using AI to fill in these gaps. So Not to say that this is gonna be effective, but this was just kind of a starting point to kind of wrap our heads around potential information that we might need to kick off this process. A lot of disclaimers in there. Yeah.
+
+Joey Williams
+So if you were trying to like one-shot an app for a customer, like the customer said, I need like this, like ORM solution, and you outlined everything in one single meeting. And you could have an intent that's literally like company XYZ ORM.
+
+Chris Naso
+Yeah, right.
+
+Joey Williams
+And then you'd have a handful of sub-intents that are targeted for each of those features that this customer, hypothetical customer, is wanting. That way in the future, when you go back into Cuddle Code and you're like, what did we do for this customer? You just click on this one intent and you have everything. You can talk to that chat session in there and it is aware of all of the sub-intents, right? Like if the customer is like, you know, whatever this specific question is, you have one place to go where you can ask and find out. So yeah, that's how I would do what we have presented here. One parent intent for the overall intention of what you're trying to accomplish, and then sub-intents for the individual little tasks to make it happen.
+
+Chris Naso
+With, with the scope that we've described so far, Does it make sense for that to be one intent, or are we better suited to try to break that down into smaller chunks? For example, have one intent just focused on being able to select Figma as a, you know, repository source to pull in files and leave that as one intent. And then, you know, the ability to, you know, I
+
+Joey Williams
+would keep— I would think that's too small for me personally.
+
+Chris Naso
+Okay.
+
+Joey Williams
+And intent, how we have used it, is really like larger scale, like, not just like feature modifications or bug fixes. It's more like, this is a big feature we're adding, but we need to track our full intention for this whole thing. Like, for instance, adding Bitbucket support later. I'm not gonna make an intent for that because it'll just be very straightforward. I'm just gonna start a session, use my feature implementer agent, and say add Bitbucket support, and it's going to do everything. Like, that's literally all I'm gonna say is add Bitbucket support, and it's just gonna, it's just gonna freaking do it. It's insane.
+
+Chris Naso
+Does your intent have every— is it, is your intent almost like a user story where you're providing kind of what you're looking to do in your context and your acceptance criteria and your Gotchas, whatever it like, is that all the context that you're throwing into the intent?
+
+Joey Williams
+Yes. Yeah, exactly. Yeah. Okay. I often don't make an intent by going into the intents page and clicking on new intent. I start a session. So everything you can do in Cuddle Code can be like Cuddle Code has a Cuddle CLI that every session has access to. So even if you're making a big route or making an intent or making a pipeline, I just start a session in Cuddle Code and I talk to that session to plan out what I'm wanting to do. And then I'll say, go make an intent that solves this, you know, problem or implements this feature or what have you.
+
+Chris Naso
+Okay.
+
+Joey Williams
+Yeah. Even with, even with Big Ralph's and automations, I don't really ever go to the actual automation page and click new automation. I'll just describe what I want in a session and then have that session make it an automation. And then I can go look at it after it creates it and make sure everything looks correctly. But I mean, I can't think of the last time something has not been one-shotted. Like, I know that sounds so silly, but that's kind of where we're getting to with all this stuff.
+
+Chris Naso
+That's really cool. Well, that's, that's exactly what we wanna kind of test and explore. I, I don't know. I feel like, Brew, I feel like the right thing to do is let's, let's set this up in KettleCode and, and let's see, you know, what we can seed, what we can set up and Yeah, it's gonna be a working session because there's gonna be a lot of copy that we need to generate in order to kind of feed the right intent information into Cuttlecode. But I think if it doesn't work, we don't, we, you know, then we return.
+
+Puru Agrawal
+Yeah. I mean, just do it.
+
+Chris Naso
+I mean, this is, this is what we're gonna learn is we're gonna figure out how to, how to make better intents over the next 48 hours. So Alex, do you wanna try to present again and let's go through this and let's just see.
+
+Alex Chernov
+Of course we can, but if we will start a work, agent will work during 3 hours or maybe more. So we will not see the results. We can just create an intent and press save button and start work and that's it.
+
+Puru Agrawal
+So let's say we know that we're going to create this larger intent and it's going to take hours to do the work, right? Maybe on this session, even though we know we wouldn't generally do smaller things, we just do it so that we can have it finish and get feedback from Joy on any questions that we have. And then sure, we can also go ahead and kick off the bigger one.
+
+Chris Naso
+I mean, we just, just an idea. Alex, you and I were talking about this earlier. Adam, you have the requirement of, hey, it would be really nice if I could create a skill using Team AI and add that skill to a GitHub repo. Like, that's a smaller use case, but we could even theoretically play around with that concept today and save this bigger Figma integration for our offline work tomorrow. That's another idea, Alex.
+
+Alex Chernov
+Yeah, yeah, I think it's a good idea to start with something smaller.
+
+Adam McKinstrie
+Or say I want to make Team AI connected to Bitbucket.
+
+Chris Naso
+Like, yeah, I mean, that's, that's ultimately what's in that ticket. I think what you could largely do, Alex, is though, so context for the rest of the Altus Nova guys and a little bit for Joey. Adam has this process. Adam, maybe it's better for you to describe it. Would you mind just kind of walking through what you're typically doing today for Anna? Yeah.
+
+Adam McKinstrie
+So for, for Anna, the, the project, you know, if I'm working in Claude or ChatGPT, I'm connected to a Bitbucket repo. And so any artifacts that I create in any of those sessions gets sent to that, that repo. And so if I create a skill that I'd like to share with other people who are on that project, I'll just put it in that repo. So right now, Team AI is compatible with GitHub, and I have repos in Bitbucket.
+
+Chris Naso
+Yeah, you got it in Bitbucket. But in this case, I think the ask is to be able to select Bitbucket as a source of where you're going to collect this information, and then ultimately being able to publish to that destination rather than Confluence as the primary repository.
+
+Adam McKinstrie
+Right, so I do, yeah, all the stuff that I create, I create it, it's stored in my local, then I push it to Bitbucket, and if I want to create Confluence content, then I make the decision after going through the documentation, hey, I want this to be a Confluence page, let's go ahead and create the Confluence page rather than go from session to Confluence and then to repo. I go from local repo, then Confluence.
+
+Chris Naso
+So we have 2 options here, 2 things that we could work on for today's conversation. One is the broader task of integrating Figma. We have a lot of the documentation in place. I think we just need to figure out how do we seed that the right way, or we take this smaller scope item as a minor enhancement to the GenAI process and focus on Adam's request.
+
+Alex Chernov
+I have a question. I have like some question for Joy. So should we have predefined like some agents to start the work, or we can like create, as you mentioned it, you have some feature implementer, some test agent, etc. So, or we can create like those agents like during our training session, or—
+
+Joey Williams
+Yeah, exactly, you're on the right. So I was looking for a spot to interject, but yes, you're From, from what I would recommend, yes, what you're saying, Alex, is exactly correct. Before I ever start any work on any new project, even if it's an existing project, I will always make my development agent first. Like, no matter what, hands down. And, and the way that process looks like is you just open a session and you spoon-feed it exactly the development flow. And then at the very end, you just say, make this an agent in CuddleCode. And if you want to share that with someone, you can just download it, share it. It packages all the skills and everything. It can also exist in a repo. But if, if I'm just being as blunt as possible, I think it's a miss. It's, it's kind of a mistake to ever work on anything and not have that be your first step. If you're, if you're doing development. So even, even here, when we're talking about working on adding a feature to Team AI, in my opinion, if you're doing that without a feature implementer or developer agent, whatever you want to call it, you're kind of already starting with your— with shooting yourself in the foot a little bit. Like, not maybe not to that extreme, but you're not doing yourself your due diligence of setting yourself up to be future-proof for future sessions. So I guess with that being said, what I would recommend is when we pick which path you guys want to work on, let's just do the first step. And that is handholding an agent all the way through what you want, what you're wanting to accomplish. So, so to get started, right, like if you're wanting to work on Team AI and you're wanting to add, like if you're wanting to just test the flow of getting an intent that's in Team AI into Cuddle Code, the first thing you'll need is the Team AI MCP configured in Cuddle Code, right? And then you can set up an automation in Cuddle Code. Where if it detects that there's a new intent in Team AI, it can automate— automatically create the intent in Cuddle Code. Like if you wanted to handle it that way, I'm just, I'm just word vomiting right now, just giving you guys ideas. We also, like, Cuddle Code also has webhook endpoints. So like you could create an automation that's a webhook endpoint. That knows whatever I'm receiving, I need to create that as an intent. So then you could update Team AI to where rather than a cron job of an automation in Cuddle Code that's just constantly checking, Team AI could hit a webhook endpoint anytime an intention is made, and then that intent would automatically be made in Cuddle Code. So like, that's solving the same problem 2 different ways. Again, I'm just word vomiting. But all of that requires— so just to get that flow working, Cuddle Code has to have the Team AI MCP or CLI, whatever you guys ended up doing, in order to pull that information properly.
+
+Chris Naso
+So what you're talking about is ultimately that connection from Team AI into Cuddle Code to start this process.
+
+Joey Williams
+Yes.
+
+Chris Naso
+And once we So, so certainly we could do that. We, we, we don't have to do that right now, right? The, the starting point could readily be, let's make sure that we have a developer agent set up. Let's make sure that we have it connected to all of the right repos, etc. And then let's just start to feed it an intent, right?
+
+Joey Williams
+Yeah. Yeah, we could do that too. Just like copy and paste it over.
+
+Chris Naso
+Alex, is that what you're suggesting? Well, I just, I think ultimately what I'd like to see is just kind of outside of building the full integration between Team AI and Cuddle Code, just make sure that we understand how to use Cuddle Code properly, what the workflow is within Cuddle Code. That's what I was personally interested in, but maybe that's not necessary for the rest of the guys because I'm not gonna be a main user of Cuddle Code. I'm just curious how that process is ultimately gonna work by our team. So it's almost like Alex, you know, from my perspective, and I'd love to hear your perspective if you like feel like we should do something different. Let's just go back to ShareKuttle Code and let's make sure that we have a developer agent set up and let's feed it. I think for the purpose of kind of controlled scope, feed it the ticket that I sent over to you.
+
+Alex Chernov
+Yeah, Chris, but we do not have set up agents in our TeamAI repos. So, and my question was to Joey regarding that, that should we have like pre-set up agents? Yeah, so like to achieve all benefits from cuttlecode, we should firstly set up all those agents as we want and just After that, we can use cuddle code in a proper way.
+
+Joey Williams
+Yeah, the agent would live within cuddle code though. I mean, it could exist in the repo, I guess, instead, but it's going to have more like first-party discoverability if it exists in cuddle code rather than the repo. So, so yes, I'm like, yes to your question or to your, yeah, I guess to your question. I'm just saying I would put, I wouldn't have those agents live in the repo. I would have them live in the project in cuddle code.
+
+Alex Chernov
+Okay, so we can go now like with you. Through creation those agents. Yep.
+
+Joey Williams
+Yeah, yeah, sure.
+
+Alex Chernov
+Okay, so let me share my screen. One sec. Where is that button? Okay, here is my projects. What I should to do?
+
+Joey Williams
+So go to your sessions. I'll just walk you through how I would do it and click on new session on the top. And you are— you have Team AI selected. did. I would change my model to Opus 5.5 personally, but you don't have to if you don't want to.
+
+Chris Naso
+And then real quick, just to dumb it down for me, I'm going to ask you guys some really basic questions. I apologize. But this down here, this is indicating what? The project that we're working on? This is the project that Alex created earlier?
+
+Joey Williams
+It is. Yeah, it's that project. All right, cool.
+
+Chris Naso
+Got it.
+
+Joey Williams
+And if you want, Alex, you can click on that project level just to show everyone to the right real quick. There's a— I'm sorry, you go ahead and close this. To the right of where you just clicked on Team AI, there's a project that— so if like if you wanted to work in a specific repo and you didn't want a session to have the context of everything else, Like if really this is only if you're wanting your session to be like token conscious, you can specify your session down to a specific repo. But in here and your prompt, this is where I would say I would outline what I'm wanting to accomplish as far as the feature goes. And because you don't have an agent, this is where you need to be quite verbose because you're creating the agent. So you need to outline your expectations, which can even be the end result should be a PR and these PRs should have video footage showing the before and after. If you want, actually, can I, I can just give you my agent and you can import it here and you can ask it to adopt it to Your repo to you.
+
+Alex Chernov
+Let's let's do it in that way.
+
+Joey Williams
+Okay, yeah. Give me one second. Let me go. How can I send you guys a zip?
+
+Chris Naso
+Slack.
+
+Joey Williams
+Slack. Okay.
+
+Puru Agrawal
+And you can even put it in the Zoom chat or the Zoom chat.
+
+Chris Naso
+Yeah.
+
+Joey Williams
+Okay, okay, Zoom chat. Okay. I sent it here in Zoom.
+
+Chris Naso
+Alex, can you grab that, download it from Zoom?
+
+Alex Chernov
+Yeah, yeah, nice.
+
+Joey Williams
+Yeah, you can do it either way, but if you just drag either the folder or the zip in there and then just say adopt the, adopt the, this agent and skill to the Team AI project. This should give you a pretty solid foundation.
+
+Igor Kostyrko
+Do you have here in KettleCode agent management page or not?
+
+Joey Williams
+Oh, well, I'm sorry, what was that?
+
+Igor Kostyrko
+Do you have in cuddle code agent management?
+
+Joey Williams
+Yeah, if you go to your project over here, click, yeah, click on your project and scroll down just a little bit. You can, I think you scroll down a little too far. Maybe.
+
+Alex Chernov
+Yeah.
+
+Joey Williams
+Oh, well, when the agent gets created, yeah, you'll be able to see it here, and you can go into— you can go into such detail where you can give it a list of approved tool calls, tool calls that it can't use. You can lock it down quite a bit. You can give the agent its own MCPs that nothing else can access other than the agent. It's fairly robust, yeah. But if you find anything that you're like, oh, I need it, we should, you know, this would be cool if it did XYZ, like you can just, we'll just add it. Is that what you were?
+
+Igor Kostyrko
+Yeah, yeah, I was looking actually to create an agent that I just didn't expect it to be under like project settings, but it is actually obvious. I was looking into like left panel to— Oh, I see.
+
+Joey Williams
+Yeah, I see.
+
+Igor Kostyrko
+But yeah, I think it makes sense to have it there.
+
+Alex Chernov
+Okay, I think we can start with intent creation, as we already have like this ticket which was posted by Chris, it's an easier task than Figma implementation. Yeah, as for Figma implementations, we need to make some research before development. But this task, I think it's like ready to development. Okay. But you said, Joy, that you are usually not using intents. Is it correct?
+
+Chris Naso
+He's using the intents. He's just not using the new intent button.
+
+Alex Chernov
+He's just using the I'm just saying, I'm just saying.
+
+Chris Naso
+All right.
+
+Joey Williams
+Real quick, did the agent finish being created? You can— it says writing the adapted. Okay.
+
+Alex Chernov
+But I think in parallel we can start to create intent, like during this agent creation process, or no, or we should wait.
+
+Joey Williams
+You can, but it's not going to create the intent with this new agent assigned to the implementation phase yet. But that doesn't mean You can't fix it later. Like, click on that, like that very first intent at the very top. If you click on the header, it'll bring you to the intent. Can I— how'd you draw on here earlier?
+
+Chris Naso
+There's a— if you hover over your Zoom screen, there's a little green pencil probably in the lower left corner. Oh yeah, I see it.
+
+Joey Williams
+Okay.
+
+Chris Naso
+You can click. It's annoying as hell, but you can do this thing.
+
+Joey Williams
+This thing. Yeah, so if you click on the head— okay, now how do I get rid of the stupid— uh, there's a trash can down below. Oh man, you can tell I've never used Zoom before. Um, oh crap. Okay, well, uh, let's see. No GitHub login. Uh, so yeah, you So this is, this is basically saying that the adoption of that agent, there's nuances between what, how I have it set up and what you guys have it set up as. So until we get these items resolved, it's not going to work properly, basically. We can either take the time to do that now or we can just continue as if it's working. But it's basically saying like you need to
+
+Alex Chernov
+get— the main problem is that our repos is not stored in GitHub, they are stored in Bitbucket.
+
+Chris Naso
+So can we create a custom agent that works for us then, or is that a huge cumbersome step?
+
+Joey Williams
+Yeah, no, you You can, in this session, say rather than using GitHub, can you use Bitbucket? Like it should be able to use the Bitbucket CLI. It's just not going to be doing that through cuddle code. It'll just be doing that through terminal calls.
+
+Alex Chernov
+Yeah, but I think I do not have Bitbucket CLI configured. On my local machine.
+
+Joey Williams
+Okay.
+
+Alex Chernov
+Yeah, I configure it, configure it. Repos is not remote to my environment. Aha, and for some repos, I must to have remote repos, yeah?
+
+Joey Williams
+Yeah, that's weird. I don't know. Did you add those as local folders? No, no, no.
+
+Alex Chernov
+So like, this is like new repo where I'm working on some like refactored version of plugin here. And the second one, it was just like a proof of concept how we can like implement Figma in our flow. Yeah, just like to show that we can open Figma files at least here. So it has a Git repository initialized, but it doesn't have a— Oh, I see.
+
+Joey Williams
+Okay. Yeah. So it's effectively a local folder that, like, what it's saying is true, though, is what you're saying. Okay. That's not really a blocker. Slow first Rails setup, each Rails test. Okay. So yeah, what you can— to unblock, it sounds like there's just one blocker left, which is getting the Bitbucket CLI set up and then having the agent know to use that instead of GitHub. Do you have to pay for the— no, no, no way, right?
+
+Igor Kostyrko
+This Bitbucket CLI cannot open PRs, by the way.
+
+Joey Williams
+So it can't?
+
+Igor Kostyrko
+It can't. Yeah. So you have to find workaround, like doing maybe some direct requests by HTTP requests.
+
+Joey Williams
+That one, that one that looks like this one can. This may be third party, but it does say it right there.
+
+Stas Skorobogach
+Yeah, so I'm not sure about CLI. I'm actually using agents through Cursor and they actually like, I teach them to use API and it works pretty reliable. And the recent development They, you can use Rover right now. So they had some issues before, but right now you can just connect Rover as MCP tool and it should work. Oh, that's for Bitbucket server. It's not for the cloud, for the cloud work.
+
+Alex Chernov
+Uh-huh, uh-huh, yeah, it's a Bitbucket server. Okay, so we have some third-party CLI.
+
+Joey Williams
+Okay, so how— I'm sure you'll have to log in somehow.
+
+Alex Chernov
+Yeah, I'm trying to find how.
+
+Joey Williams
+Yeah. Oh, oh, I think I just saw it. It was like, I was logging.
+
+Alex Chernov
+Yeah, offline.
+
+Joey Williams
+Yeah. Yeah, BKT auth login.
+
+Alex Chernov
+I think it also, also created not for the cloud version as it wants to have Like some, some custom URL.
+
+Joey Williams
+Do you guys self-host your Bitbucket?
+
+Alex Chernov
+No.
+
+Joey Williams
+No. Okay.
+
+Adam McKinstrie
+Oh goodness.
+
+Alex Chernov
+So I think we will spend all our time for configuration.
+
+Adam McKinstrie
+So Alex, your email address is Altus Nov, not Altus over.
+
+Alex Chernov
+I see.
+
+Adam McKinstrie
+I, I did that all the time.
+
+Alex Chernov
+I see, I see, I see.
+
+gbcalegari
+In the meantime, Joey, uh, can I ask you a question about the intents? Sure. So, um, it seems to me that the intent is basically the plan that we want the agents to, to go through, right? So similar to what we have, like a brief that I get for to do the design, I would have like what I'm trying to accomplish, the steps, and like a recipe of what we're trying to do. And then I kind of hit play and the agents will start doing the work.
+
+Joey Williams
+Is that— yeah, I mean, yeah, yes, yeah, that's, that's all correct. The, the Intents feature, man, I worded this well the other day and I'm trying to remember how I worded it, but it basically, it doesn't necessarily enable any new like revolutionary functionality with AI. Like if you remember Opus Plan, there was a model called Opus Plan a while back where Opus would do the planning. planning, and then it would hand that off to Sonnet for implementation. Um, under the hood, intents work very similarly. You want to use the highest-end frontier model to do the planning, and then you want to use whatever is kind of the best agentic implementer model right now, which is kind of like Opus 5.5 or Astra. Um, But what it, what it does give you is historical recollection, right? And that's, that's what you would lose in the past when you were using Opus Plan because it was just in a single session. And if you, if a week or two passed and, you know, that session is going to be buried very deep And it would be hard to find. Whereas with intents, it's just there. You can search for it, you can find it, you can talk to it. It's, it's, yeah.
+
+Chris Naso
+Intents support images or process flows?
+
+Joey Williams
+It doesn't display images. Okay. But that would be an easy thing to add, actually. It's currently a markdown file that it's just displaying. But I mean, yeah, I can add images. Now, if you put an image link in there, the model will know to pull the image. Like, the model is aware of it. It's just visually for you looking at it.
+
+Chris Naso
+Got it.
+
+Joey Williams
+I'm sorry, Alex, go ahead.
+
+Alex Chernov
+Guys, I think like we just like spending a time not for like the correct things as like to configure those keys, I need like CLI, I need more time, or I think it will be better just like to configure to move our repos to the GitHub just like for a test until we will like resolve the issues with Bitbucket CLIs or we will find some correct solutions. Yeah, and I need to like spend some time on it, at least like to configure GitHub Actions, yes, as we have some Bitbucket Actions like tests, some checks, etc. In Bitbucket, I need to convert it to the GitHub Actions, etc., yeah. So, and like I need to spend some time on this configuration, yeah. So my proposal is like for now, like just spend time not on like start working on it, but go through the like this kettle code and understand like all features, all prerequisites to use some kettle code features. Like at least here, like we like know, yes, that we should have some predefined agents here. we know some like prerequisites that some like our repository storage, like repository service, which we're using should support CLI. Yeah. So now we already know like some of the requirements and I think there is more and more prerequisites which we should meet. So my proposal is to focus on it. That's fine.
+
+Joey Williams
+Yeah, so you want to get, uh, yeah, we, we can. So you're basically saying move past this for right now and yeah, you can circle back later. Yeah, um, yeah, that's fine. Uh, can you click on the new button right here real quick? And, uh, over here on your agent, can you make sure that the feature implementer agent appears? Yeah, you can star it if you want and then it becomes favorited. Now if you have multiple agents, you'll just get this favorite section. But yeah, go ahead and click on the actual feature implementer agent. And you can now say that in whatever repo is the Team AI project, you can ask it to implement whatever feature. And just for now, I would say since GitHub's not working or Bitbucket, have it record the implementation and give it back to you in CuddleCode, and you'll see a video show up in CuddleCode that you can click on and watch.
+
+Igor Kostyrko
+It won't work. I saw the message that Pyright CLI is not installed.
+
+Joey Williams
+Playwright CLI is not installed.
+
+Igor Kostyrko
+This is what I saw in the message of Agent Creator.
+
+Joey Williams
+Okay, go back to— yeah, I think it's your— yeah, I think you did install it.
+
+Alex Chernov
+Yeah, I already installed it.
+
+Joey Williams
+Ask it to verify. Just say, I've installed, can you verify? Installed Playwright, can you verify? Okay, okay, uh, so yeah, you should be able to go back to your other session, um, And, and kick it off. You can, if you don't even, I'm sorry, if you don't have an idea for a feature, you could just ask it to.
+
+Alex Chernov
+No, no, no. Could we start like with intent creation? I understand that we can like work with direct session. Yeah, but I think it's better for us to understand how to start from the intent creation. Yeah, as I think in a, like, in a result, we want to achieve that functionality when we are using the kettle code. Yeah, and let's say we will have some intents creator agent which will access Team AI via MCP or CLI.
+
+Joey Williams
+Right.
+
+Alex Chernov
+Okay. Yeah. And transform the defined requirements to the intents in— Okay.
+
+Joey Williams
+So if, if you have— this is— I'm a little ignorant here. I don't know if Atlassian has like a CLI or MCP to interact with, uh, what's on your page. Like, right here, like, you have a share button on the top right. Um, if, if you can give Cuddle Code access to, uh, this board, whatever this is, uh, you could just say, here's the link to AEA80, can you make an intent in Cuddle Code? For this effort.
+
+Igor Kostyrko
+Yeah, there I'm just— that— can we just dump their copy in?
+
+Chris Naso
+I'm sorry, can't we just dump the copy into the—
+
+Joey Williams
+yeah, you can also, you can also do that too. Yeah.
+
+Alex Chernov
+Yeah, let's do this way.
+
+Chris Naso
+Oh, do you guys have like a skill that that agent has that generates intent?
+
+Joey Williams
+Yeah, there's a built-in agent for intent creation.
+
+Chris Naso
+That's cool.
+
+Alex Chernov
+All right. Okay. Or I— let's see.
+
+Joey Williams
+So like to be more explicit in your intention, I usually say like in the cuddle CLI. Like create an intent and cuddle or something like that, just, just to give it, I guess, you know, more explicit. But this, I think it should still work.
+
+Alex Chernov
+As I can see, intent was already created. Okay, as I was already like playing with this intents, I have a question. How often you refining the plan which was created by research agent?
+
+Joey Williams
+So it does it at the very beginning, and then if you have source materials that have changed outside of the intent, you'll get this like section right here that pops up that suggests that the plan needs to be like basically re-researched. And then you can just click a button and it goes back into research mode and it will update the plan.
+
+Alex Chernov
+So like Each time when some referenced content was changed, it asks you to like recreate plan. Yep. Well, so you're— not just like say like referenced context changed, but let's say the context was changed. Yeah, so some context was changed. Some inputs of, uh, on which plan rely on.
+
+Joey Williams
+So here, here's why I would have preferred you use the share button over here, right? Because what's going to happen is if you were to use that and Cuddle Code has access to just view the contents directly from Atlassian, then it's going to use that to know if the plan has changed, right? Whereas what we've done is we just copied and pasted text over, and that's just what it's going— that's the source of truth going forward, right? So what happens when you are creating an intent is it creates an isolated work tree, a separate working branch of the repo, and it has all of this outside context. And if any of that outside context changes, that's when it knows that it needs to do re-research. You're never going to see it in this intent because we gave it zero outside context.
+
+Alex Chernov
+Okay, and I have a question. And but in case if we will, like, create our intent, intents, We are connection, like MCP connection between CuttleCod and Team AI. Yeah, let's say, let's imagine the situation. situation. So we are working on some feature, yeah, but our requirements is not approved, like it's not a final requirements, yeah, but we want to implement some proof of concept and also include like, uh, produced code as an artifact, uh, in our Team AI work stream, yeah. And how Like, I am— I see it. Yeah, I'm going to— I'm opening the Katalyst, like, saying, like, please create an intent from Team AI blah blah blah work stream. And it creates— it creates, uh, like, intent. It builds, uh, like, the code, uh, like a preview of what that would look like. Yeah, some, some preview. Yeah. And my question is that Okay, preview was built. I included, uh, produced files as artifacts in my work stream in Team AI, yeah, and send it back to, like, send it to some approvals, yeah. And I received a change request that, let's say, the button should be gray but not the green, yeah. And I have changed it and I'm changing requirements inside the Team AI, but not in a cattle code. And how the cattle code can recreate the plan if context in Team AI, in a source from where information about this intent was taken. How I follow you.
+
+Joey Williams
+Yeah, yeah.
+
+Alex Chernov
+How it will be triggered? Yeah. So like, should our MCP support some particular tools? Yeah. Or should we send like some events to your like webhook endpoints, etc.?
+
+Joey Williams
+Yeah, there's a few ways you can handle it. The, the most elegant solution I mean, this is also the most time, but would be to actually make a Team AI plugin within Cuddle Code. That way there's full parity between the 2 apps. So if you did update a— so what that would look like is when, when an intent is created from Team AI into Cuddle Code, there's parity on both ends. Team AI is aware of the intent ID and Cuddle Code's aware of the Team AI, I don't know what you guys call it, but you know, its ID, whatever that is. And then if there's an update on the Team AI side, it would just automatically, like, because at that point, the intent planning is different. It's not really planning, it's not coming up with the plan anymore in Cuddle Code. You guys have came up with the plan. What it is coming up with is the implementation approach. So the, as far as like just getting the parity between the two, we either can do a couple of automations that are webhook automations that would be very quick To get set up. Or we could do a full-blown plugin for Team AI into Cuddle Code. Like we, just like VS Code, like there's a plugin extension support in Cuddle Code.
+
+Alex Chernov
+Do you have somewhere like the documentation of your SDK?
+
+Joey Williams
+We do. It's not public. I just need to, I just need to make it public. But if you click on— it's not for now.
+
+Alex Chernov
+It's just like, do you have or not? In case you have, okay.
+
+Joey Williams
+But yes, yeah, we do. Like there's already like ComfyUI. Like I had a buddy who uses ComfyUI. So he built a plugin system for ComfyUI inside of CuddleCode. And And there was, there's another guy who does reverse engineering for video games, and he wanted this like enhanced automation suite. So he made a plugin for it that just does a little bit more than what our current automations do. Um, it's kind of curated to his whole thing. I'm just saying like, it's not that it's, it's literally just like opening a session, giving it this documentation and just saying like, here's my expectations of what this plugin should do. And it just, you know, it makes it.
+
+Alex Chernov
+Okay. So while we're waiting until it will finish, click at peek at session.
+
+Joey Williams
+I'm not sure what it's doing. Yeah. So this is It doing all of the planning based on what you had pasted in. So it's going to create the plan document, and when this is done, it's gonna appear in the intent. So you can see here, it actually did a fan out. It probably had to go look at multiple repos, so it did multiple at once.
+
+Alex Chernov
+Oh, one question. I already saw this like resume session. Should I use this resume or no?
+
+Joey Williams
+Yeah, you can, you can use it. So anytime you see this intent research result. It's saying that the— this session's done, basically, is what it's saying. It stays open in case you want to look at it. There's a setting to where you can have these auto-close when they're done. It's just not enabled by default. But yeah, this is, this is saying that this session's done, and it's given the context back to the intent. You don't have to do this, but my buddy did this often and he liked the results. So there's a skill called Grill Me, the Grill Me skill. I don't know if you guys have heard of it, but it basically takes all of the context and the plan. You have to have a plan before you can use the Grill Me skill. So that's why the plan exists first. But it's this button here. It basically looks at all the context, looks at the plan, and it tries to poke holes in it is the short version. So you can trigger that by clicking that button. You don't have to. I'm just saying you can click and— Yeah,
+
+Alex Chernov
+I do not have a right agent for it.
+
+Joey Williams
+It's a skill. So it doesn't actually— like, the agent you choose doesn't matter in this regard because the skill gets injected into the session. But yeah, what this does is it tries to poke holes in it and it just refines the plan a little bit. What you can do at this point, if you want implementation, is you can— if you're like me, I prefer not interacting with GUIs. I just like looking at them. As I open the chat session over here on the side and I start talking to the intent, And you can see real quick, click up here and go to the intent settings. It should be right here. And you can see what— so this intent was not created with the feature implementer agent as the work agent. So I would select that and take a look at what model you have selected here.
+
+Alex Chernov
+Sorry for interruption, Joey. So like in ideal world, yeah, we should have this research agent, planning and work agent defined for all like projects. Yeah.
+
+Joey Williams
+I mean, kind of, it's fine to actually use the feature implementer agent for all 3, but that's a little unique to, it's unique to CuddleCode in the sense that CuddleCode is doing a lot of the heavy lifting in the background. Like there's a lot of prompt injection that's going on at different stages. So each stage is respective to know when to cut off and what to do. Like if you did feature implementer for all 3 of these, it would technically be better than not having an agent because you're now researching with the session understanding the full scope of what the agent will eventually be doing. Does that make sense?
+
+Alex Chernov
+Yeah, yeah, yeah, yeah.
+
+Joey Williams
+I would, I would check real quick what models it has selected. Opus 5.5 is good. Yeah, so you look good here. And then in the chat session, I would just say, I would ask it questions if I had any questions about the plan. But if I didn't, I would just say kickoff work session. Using Big Ralph or using agent fanouts, whatever you deem appropriate for the plan. So this one's pretty straightforward. I would probably not even use any sort of special thing and just say, can you implement this?
+
+Alex Chernov
+Okay, but If you remember, my question at the beginning of our conversation was about how a kettle call agents or like this orchestrator choose the right way of the implementation. Yeah, if it's a RALF, big RALF, or like some standard working session. And now you said that it's pretty straightforward, so we can just like spawn standard working session. Yeah. And my question is like, how do you measure this? Like, when you want to use Ralph or Big Ralph, or maybe Cuttlecode has like predefined skills for it, for this?
+
+Joey Williams
+I don't know if you're really going to like the answer, but as far as like for me, It's like shooting a basketball. You kind of just understand after a while by looking at it based on feeling. Like, you know, like if I look at this, I know the intention here is just adding Bitbucket support. I know that it's going to— you look up documentation on the CLI and it's going to add what it needs as far as tool calling goes to the Team AI app. Like, I know if I were to be implementing this personally, it's fairly straightforward. It's not— you kind of get what I'm saying? Like, it's— if I were to have an ask that was Trying to think of something Bitbucket related, like add Bitbucket support and automatic GitHub or Bitbucket Actions creations based on, you know, like our automations and like have it all tie in. Like you're starting to get a little more convoluted in your scope. It's not as straightforward. That's whenever I would start looking into, because that's parallel work at that point. Graph, having it to do a pipeline or graph implementation. Um, and I, I, I don't know if that answers your question, but a lot of it is based on just you getting used to the, the flow. Like, what it— you know, now if you do arm autoplay at the top, it's going to do that itself. Right. Oh, sorry. Go unclick that. It's right here. Yeah. It's going to use Jev if you have Jev configured to look at all of the context and Jev decides how to implement it.
+
+Adam McKinstrie
+Joey, is there like a quick start guide? Like, here's a checklist step by step if you wanted to I want to, I want to build a pinball machine for my monitor. And that's just, here's an example. And here, here are the steps that you'd go through to get this set up and working. And you can have it automated to the, to the nines by, you know, hitting the Arm Automate button that we just looked at. Or, and then maybe there's, hey, here's some skills that you may want to consider having available, like superpowers, brainstorming, you know, Grill Me?
+
+Joey Williams
+Yeah, so we try to make everything as built-in as possible, like the Grill Me skill. Like, you don't even know it's happening, you just click a button, right? But as far as the onboarding goes, when you first install the app, you should see something on the bottom left where it's like a handful of checkboxes of what you need to— of what you what we believe gives you the best experience. Got it. It includes like setting up Tailscale to where you can interact with CuddleCode from your phone. But there, there isn't anything that says here's a curated project that we've came up with. Let's walk you through building it.
+
+Adam McKinstrie
+Got it.
+
+Joey Williams
+That probably, I mean, that's a good idea. That's probably something we should look into just to get people a better hands-on experience.
+
+Adam McKinstrie
+And then I guess I see in the bottom left, the knowledge, the wiki. Is it something that we can just pull up and type something in? Hey, how do I do this?
+
+Joey Williams
+Yeah, so this is actually a really cool feature. I highly— if you guys haven't used Jev or any System 1 models yet, it's pretty insane. You should, and it's dirt cheap. There's also Leia if you want to run it locally, and CuddleCode supports Leia as well. But what it does is if you go here, let's try this real quick. Let's see if you're set up. Go to your project. If you can, Alex, and go into your project settings.
+
+Alex Chernov
+Oh, sorry.
+
+Joey Williams
+And the wiki right here and enable project wiki. You can, yeah, you can click that now if you want. What this does is it creates an automation that runs every, I think it's every 3 hours, and it looks through all of the sessions that you've had for this project, and it builds out the LLM wiki. And it, it does a good job of taking out things that are no longer needed, um, getting rid of all the breadcrumbs of, of just artifacts that, you know, are, are dormant now. And if you're— here's the circle back to Jev and Leia, the System 1 models. When you go to type a new set, when you go into a new session and you, while you're typing in your prompt, Jev and Leia will be in real time showing you which articles it's pulling that to add extra context into your session. And it, it doesn't bloat it because it goes all the way down to the individual line numbers in those articles. So what you're getting here is a self-learning capability as you're using cuddle code.
+
+Alex Chernov
+Cool, cool. Guys, sorry, but I need to switch off a bit earlier as I have some family problems now.
+
+Joey Williams
+Oh, I'm sorry, Alex.
+
+Alex Chernov
+I need to switch off now, but I think we, you can Continue with Igor. Like maybe as today we like a bit cover projects, like project setup, like when you need to create some like agents first. Yeah, you need to have some CLIs, etc. Maybe we, you can spend with eager, like last 20 minutes for some pipelines or automations. Yes, it's an interesting thing, which at least I not tried to use, didn't try to use.
+
+Joey Williams
+Yeah, we can go over those.
+
+Alex Chernov
+Okay, sorry guys for this, but I need to drop off.
+
+Chris Naso
+All good, we'll connect later. Thanks, Alex.
+
+Igor Kostyrko
+Bye-bye. Do you want to me share screen?
+
+Joey Williams
+Sure.
+
+Igor Kostyrko
+Yeah, so where do we stop? So we discuss session intents. Oh, I have a question when Alex was showing it. When we create a session, how do we know to which intent is it related or it does it automatically?
+
+Joey Williams
+It does, yeah. I don't know if you saw it on his screen, but when an intent has a session, it has like a different like notation over here. And it'll like, it'll show, it'll like break it down. Let me see. I have a, I can take a I have a screenshot. I can show you what it looks like. I'm gonna scroll up in my chat with a different Alex. Man, I thought this was like yesterday. It looks like it was a long time ago. Well, um, if you— Igor, if you show Or if you go to an intent, do you have one currently? Okay. Well, you can create an intent if you want. And when you start a session, you're just wanting to see what it looks like visually?
+
+Igor Kostyrko
+Yeah. So let me So when I create, I, I just cannot— okay, so
+
+Joey Williams
+if, if you click this, this new button here, that's creating a new session. Yes. Uh, and then in that new session, you can have— you can just ask it to create an intent, or you can click that new intent button that you had up there. Either, either way. There's no wrong way of doing it. It's just personal preference.
+
+Igor Kostyrko
+Great. So yeah, I was just wondering, how can I create a session inside the intent? So I should choose the intent and create— Okay.
+
+Joey Williams
+Yeah. Create the intent first.
+
+Igor Kostyrko
+Okay. I got it. So if it's your thing, I don't think we should stop here. Unfortunately, I don't have intents. Let's probably move forward because we have only 18 minutes or 17 minutes. Okay, so what else do you want to cover? So automations, automations, I think it is clear what's that and they can be created automatically, right?
+
+Joey Williams
+Yes.
+
+Igor Kostyrko
+What about, okay, about agents? Yeah, I also had a question about an agent. So when Alex created an agent inside a cuddle code, so basically it's not an agent as it is in Claude Code or whatever. It is an orchestrator that will create agents inside Claude Code or Codex internally, right?
+
+Joey Williams
+Um, there is a protocol called ACP, which stands for Agentic Context Protocol, and it uses that protocol. It makes sure that all the agents that are created in CuddleCode are compliant with that protocol. So it works with Claude Code, Codex, OpenCode, basically every other harness. So in a sense, CuddleCode's like a harness wrapper. But yeah, it doesn't make the agent for Claude Code. It just makes it compliant with ACP, which means it works with all of them.
+
+Igor Kostyrko
+Okay, why I'm asking this? Because what I saw, I saw only 3 types of agents. This is research, planning, and work. For example, I want to have an agent for, let's call this QA agent or reviewer agent. I assume right now it should be inside the work agent. Um, but how it will, how it will be created? Like, it will create Claude Code agent inside, right?
+
+Joey Williams
+So for an intent here, the— there's not really a research, planning, and work agent currently. These are just phases that every intent goes through. So whenever it kicks off the research phase, There are, there's prompts. There's a prompt that gets injected into the session that you don't see that tells the session, essentially, you are a research agent. And here's the current, here's the current context as short as possible, and you are wanting to research the implementation of this. Now, if you were to give this an agent, it goes a step further and saying that here's the, here's the agent that like we're targeting. So like I'm doing a research agent for feature implementer. As I'm researching, I need to make sure that the entire scope of what the feature implementer agent does is also accounted for. So if the feature implementer agent requires that you open Playwright, record the screen, and that video gets included in the PR, then that means while you're researching, that's going to be part of the plan, or the— that's included in the research. I guess technically that'd be in the planning port. Part, but does that make sense? Yeah, so you don't, you don't need a research agent because there is one built in.
+
+Igor Kostyrko
+Yeah, I've got it. Okay, what else then? Ralph loops. I was actually trying to start cuddle code with Ralph loops, and unfortunately I've got like fails. So now I understand that probably this is not how I should start my work. I should start with intents, right? But yeah. Is— yeah.
+
+Joey Williams
+So have you looked up what Ralph loops are? Yeah.
+
+Igor Kostyrko
+Okay.
+
+Joey Williams
+Oh, crashed. That's interesting. Select a provider mode. Oh.
+
+Igor Kostyrko
+Yeah, I provided like, uh, the plan, like why I didn't start with Intents, because I already had a plan, I already had everything. I just wanted to, to start a rough loop and, um, to see the result. But yeah, it was a crash anyway.
+
+Joey Williams
+Um, well, what this error here is telling you is that the, the model that you had chose, you had, you chose the, um, you have the permissions mode, like in, in Claude Code, it's like bypass permissions, auto, manual, stuff like that. Yeah. So, okay. Bypass permissions. It looks like it was ran manual and it wasn't able to, like, if it's saying select a provider that supports unintended work. Yeah. Unattended work. So it's almost like it was set to manual or something.
+
+Igor Kostyrko
+Yeah, but I think it's because I started this from Ralph loops instead of doing intents, probably. Anyway, I think it's clear what the Ralph loop is. Does anyone have any questions about this, or we can move forward?
+
+Joey Williams
+Okay.
+
+Igor Kostyrko
+Forge.
+
+Joey Williams
+Okay. So Forge is a, like an automated evolution for your agents. So if you have an agent that is, let's say, here's, I've, this is a good example because I used this for Motiva the other day. They had they had these safety training videos and they weren't liking the end results of what the training videos were. So what I did was I came in here and I have an agent that was, I think it's called like Claude Motion Skills. And, and that agent is purely about making JavaScript-based video animations. And in here, you give it the agent and you say improve, and it comes up with hypotheticals, and it will look at previous sessions that used these agents to come up with these hypotheticals, hypothetical like tasks basically. And it gives you an A/B result. So it uses the existing agent to come up with a video in my example, And it used a modified agent that it thought would produce a better or different video as the B video. And I just sent both of these videos to the stakeholder. They told me which one they liked and they provided feedback. And then I just came in here, pasted, you know, what they said along with their decision. And then we iterated on that like 3 or 4 times. You Until they got the video. I can even send you guys a video if you want. But that was very stakeholder-driven. You can also automate this as well, where if you know what the end result is, like maybe the end result is to look exactly like another website, for instance, it can iterate In that regard too. And because it has the end result to check against, it would be automated and it would just keep looping and refining the agent or the skill or what have you. Okay.
+
+Igor Kostyrko
+Yeah. So, uh, basically this Forge is for, um, evaluation, uh, and grading skills, agents, and then choosing the best approach, right?
+
+Joey Williams
+Also for JEV too, like System 1 models. Um, so if you want to train a System 1 model on, uh, on weight, on its weights, on how it should decide things going forward outside of just the context that it's provided, that deciders section here, uh, that is what this is. So this is very unique. Not— I am not aware of any— of anyone else that does this yet, but it is essentially weighting already weighted models to be more curated towards your task for System 1 models. We use this at FSG for assigning work order numbers to vendors. This was previously about 10 minutes using Haiku 4.5, and now that we're using Jev and Haiku 5.5, it's down to about a minute and a half to 2 minutes. And it's less tokens and it's cheaper.
+
+Igor Kostyrko
+When you say training models, are you— do you mean literally training models or?
+
+Joey Williams
+No, no, no, no, it's different. It's not because these are— our JEV is already weighted, right? So what this is doing is you're reinforcing expectations. Essentially based on a curated set of historically accurate data. So like for us, for the work order assignment, we have thousands and thousands of work orders that we can go look at and see which vendors they were previously assigned to. And it takes into account like the mile or kilometer distance between the vendor and like the site that they have to work at. It takes, you know, it takes all this other context into account. That Jev would not normally take into account. So you're, you're basically coming up with a curated agent for Jev that knows what matters while it's deciding something.
+
+Igor Kostyrko
+Okay, that's interesting. And what about loop strategy? Um, is it possible?
+
+Joey Williams
+This is This is the one where you would use this if you have knowledge of what the end result looks like. So, like, click on— well, let me open it up in mine real quick. So if you click on champion, seed champion, This is where you can give it information on like your end result should look like this website or a PDF, like the path to a PDF file or whatever, whatever you want the end result to look like. And it'll loop until it believes it has done so.
+
+Igor Kostyrko
+And then when where I can apply this loop in raw loops?
+
+Joey Williams
+Well, the agent app, because you're improving the agent, right? So you could then use that agent in raw loops. while loops.
+
+Igor Kostyrko
+Okay, yeah, got it. Okay, let's move forward. What about pipelines? I think it's interesting thing.
+
+Joey Williams
+These are, it's a DAG. It's, you can kind of think of like AutoCAD or what's that other popular one? Shoot, can't think of it. Oh, NAN. It's kind of like NAN, but curated for agents. You can click, so you can actually say in a session that you want it to build a pipeline and it will build a pipeline. I'll show you guys a, okay. Yeah, so you can, you drag and drop nodes. You can have inline Rust code if you have the Rust compiler configured on your system. But like, click on that node and you can assign it a prompt at the bottom of what you want this node to do. You can give it an agent at the top. And you can also set up variables to be passed in. Through different nodes. If you add a second node, then that's when you would connect them. Yeah. Yeah, there you go. Yeah, you gotta— it's like, well, that— yeah, you'll want to do the bottom one to the top. Do it like that.
+
+Igor Kostyrko
+Okay. Yeah, I've got this. So yeah, this thing more tuning in.
+
+Joey Williams
+You can click on this here and you can define like whether or not that is always happening or sometimes or failure. But here, let me find this. One of my buddies is a reverse engineer, and he supports this— it's kind of silly, but he supports this game that updates every Monday. And he sent me his pipeline that automatically updates all of his offsets and does discoverability on what needs to be changed. And it just— it updates his entire stack automatically every Monday. With this pipeline. I just posted it in the chat. So you can get pretty crazy with this. He didn't put the most amount of effort into making it visually appealing, but you can add loopings. There's foreach statements you can add, or foreach like blocks you can add. Yeah, you can, you can get pretty crazy with this, and you also don't have to design this by hand. You can just start a session, describe what you want, and it will make the pipeline for you entirely.
+
+Igor Kostyrko
+Okay, that sounds interesting, and it has automation, so I can schedule it for— Yep, exactly. Got it. Yep. Nice. Okay. So what else? Computer use. Okay. Browser. It's clear. Okay. And then we are coming to remote thing. Right now I'm set up as local. I don't know, like I wasn't present on your previous call, but I'm really wondering how this works in cloud. I know that we're almost ending the call.
+
+Joey Williams
+So, I mean, you're, you're good. I can talk forever. I love my little cuddle code project. So remote agentic nodes is, it uses Kubernetes to dynamically spin up nodes from other machines that you have already set up as RANs. So like for my home network, Cuddle Code is hosted on this like little, little not powerful box. And I have my desktop that has, that has a 5090 in it. And I have another machine that has a 3090 in it and another, and my laptop that has a 4080 in it. And these are all set up as RAN nodes on my network. So they're pretty beefy machines. And whenever I start a session in CuddleCode, I'll show you here what it looks like for me.
+
+Igor Kostyrko
+Are you going to share the screen or?
+
+Joey Williams
+I'm just going to post a picture.
+
+Igor Kostyrko
+Yeah.
+
+Joey Williams
+Where did chat go? Here we go. So at the bottom of this screenshot, you can, you can see that It says run on RAN cluster, and it has auto. And so what it's going to do, those are the 2 machines, that's my laptop and my wife's desktop. It's going to spin up a node on those machines. All the repos get cloned over. It does have a longer setup time than just starting a new session because you're, it's getting everything set up for an isolated environment. On those remote machines, but it uses the compute of those machines. So even though CuddleCode is hosted on this like little small device that is not that powerful, it's allowing me to use powerful things with cuddle code, powerful resource compute, and it's load balanced automatically and all that good stuff. Um, so this is not inferencing, this is solely just running a session on a different machine and using that machine's compute for what the model is calling for, for tool calls and stuff. The The next tab, which is Cluster, this is what we're currently working on. It's not formally released yet. Worker Nodes is the previous version of it. They're effectively the same functionally. They will be the same thing, but this is to allow local inference compute to be scaled and load balanced across whatever machines you want. So like one of my buddies has 4 DGX Sparks and he's using it, he's using those to iron out this feature. But you can load a single model across multiple, multiple machines. They don't have to be the same machine.
+
+Igor Kostyrko
+Yeah, so, so we are talking here about local models that, that we are installing. So what about, uh, using, um, uh, Claude or whatever in, um, in cloud, like in AWS, or I don't know, um, maybe you, you have cloud for enterprise subscription or so?
+
+Joey Williams
+Yeah, there's nothing stopping you, even Like, I know you can't see what's going on in the cluster right now, but there's nothing stopping you from hosting it in cloud premises on your company's, like, enterprise cloud, right? Like, if you were renting it from Azure or Google or whatever, you can still have quote unquote local inference in the cloud that you're paying for. But the entire premise is we have customers that are very conscious about intellectual property going to like ChatGPT. And it's funny, they don't really care about Anthropic, they care about freaking ChatGPT. But yeah, so that's, that's where the, this effort is all coming from is those clients, oil and gas refinery clients not wanting their IP going outbound.
+
+Igor Kostyrko
+So, Prue, I think that you today talked about connecting different accounts, and it seems to me it's a different thing, at least for now. I mean, different seats.
+
+Puru Agrawal
+Uh, or yeah, so this was something that we were just kind of kicking around as an idea, Joey. And, you know, I don't know that we're expecting Cuddle Code to do this, but just wanted to run it by you sort of as an idea, right? So one of the things you guys brought up, which I think we very much agree with, is that at design time, the token cost for AI in like individual, like in the seat subscriptions for Codex and Claude are way cheaper than API tokens.
+
+Joey Williams
+Oh, right. Yeah.
+
+Puru Agrawal
+So, you know, in order to maximize that, right, instead of having like dedicated seats to Igor and Chris and Prue and Adam, is there an architecture where you effectively set up seats that are assigned to service accounts? And so you have something like cuddle code, and then you have your users, right? 1, 2, 3, 4. And instead of these guys like all going to their particular Claude seat or Codex seat, you have like basically like a shared AI seat 1. Yeah. Seat 2, seat 3, whatever. And then this thing can just kind of look at, you know, token consumption on any of these at any given time. And then basically when you start something, just assign it to a seat, right? And as new things are starting, they just get assigned to additional seats. So if we had 10 seats, then it's effectively round-robinning things across those seats, and it's abstracting the user down here from like S1, S2, S3 users. And I didn't know if you guys were looking at something like that to just maybe even further reduce costs, because otherwise you might have like some seats that are maxed out and some seats that are being underutilized. Right, right.
+
+Joey Williams
+No, absolutely. Technically, and you probably know this, it's just, you know, whatever. It's against Anthropic and Codex's terms of service to do that. Um, but as far as it being possible, yeah, it's totally possible. Um, we were— I did that for FSG for a project called Ripley, uh, and Adam ended up just asking me not to do it because we got a warning from Anthropic. But, uh, So we pulled back on that. But what you can do in CuddleCode that seems to be fine because it's been in there for a few months now, I'll just, I'll post a screenshot. You can have multiple subscriptions on your same account, on your same Cuddle Code account. So like if you see in that screenshot, I have 2 Claude Code subscriptions. One of them is FSG, one of them is my, my own. And I just, like if I look at my weekly usage down here for Claude, you can kind of just tell that I just manually more or less load balance my usage, like whenever I'm starting a session that— so I'm trying to think of— this was a few months ago, so I'm trying to think of exactly why we got flagged.
+
+Puru Agrawal
+Yeah, that's what I'm trying to think as well. Like what would— so if you have seat 1, seat 2, seat 3, and then workload is just getting assigned to those, like, what do they care?
+
+Joey Williams
+Yeah.
+
+Stas Skorobogach
+And, and, and actually, like, that's an interesting question because what I, like, I dig today through their business, like, subscription accounts, and they have these service accounts, effectively agents that counted as seats, right? And you can assign seat and agent. To the agent. And in theory, nothing prevents this agent to be used for multiple sessions until it will be completely exhausted. And it's not a violation of— that's a shared, like, that's a shared agent that Anthropic provides in scope of the organization, right? So, like, you can have probably, like, they can track that one account, like share it across multiple persons with like, with some certainty, right? Like, and they can flag because of these, but we can have like cheap, like standard seats, $20 seats per account, and we can have expensive agents with premium seats that can be, as you described, in round robin and assign it to the tasks.
+
+Puru Agrawal
+Yeah, it seems like if you— I mean, we'd obviously want to understand like what's legit and what's going to get frowned upon, right? But to the extent that this is legit, like building in this capability where cuddle code is sort of the abstraction between the users and the seats, it could be a really powerful selling point for you guys because it's dramatically just reducing cost, right, on top of all of the, the productivity benefits.
+
+Joey Williams
+So are you— okay, I think so. And I'm starting to get some of the some of the memories back. So like for us, we have Cuddle Code installed in like enterprise mode so multiple people can be on it at the same time. And I believe the issue was that we were having multiple people use the same subscription. And I think our subscriptions were the consumer subscriptions. I don't believe they were like the enterprise Okay, right.
+
+Puru Agrawal
+But like, if we have these team subscriptions and we bought 10 seats, right, why would they care if we're moving workloads around between the seats?
+
+Joey Williams
+Yeah, yeah, I— yeah, you're right. I'm gonna add that in my notes. Okay. Uh, that, that'll probably be in the next release. Thanks, Peru. Sure.
+
+Puru Agrawal
+I mean, that'd be a huge benefit to us if you wanted to add that. And I imagine FSG could also, because Adam said you guys have all switched over to the team subscriptions because of the privacy and the data confidentiality that comes with it.
+
+Stas Skorobogach
+Yeah.
+
+Joey Williams
+Yeah, you're right. Let's see. I saw, Igor, that you were messing around potentially trying to see what getting a RAN setup would look like. I want to touch on something real quick. There is a thing that we call remote hosts in CuddleCode. If you go down to your settings here, And click on remote hosts here. So yeah, add remote host. So this is what, what this is doing is it's setting up a trusted SSH connection to whatever this machine is. And once you have this, it makes everything else in CuddleCode with this machine easier. So if you set up a remote host for machine A and you want machine A to be a RAN, because it's already remote host, when you go to the RAN section, there's a dropdown that says computer A for remote host. Let's see.
+
+Igor Kostyrko
+This one probably.
+
+Joey Williams
+Here, let me open it up in mine. Yeah, so cluster and orchestrator, that, that one, that dropdown would have the remote host, and then you would just click on that. A lot of the other options go away and you just see continue. And it SSHs into that machine, gets everything set up automatically, and then it just appears in Cuddle Code as a RAN. Computer use works the same way. Worker nodes and clusters work the same way. So everything as far as getting environments set up that benefit Cuddle Code, the origin of that always starts with remote hosts. Because then Total Code will do the implement— the setup for you.
+
+Puru Agrawal
+Like, I'm sorry, we have a project for a client right now, and for that, our guys kept running into like out-of-memory errors and stuff on their local machines. And so we ended up just allocating like a really big VM in AWS and then just let them sort of offload a bunch of their work to that VM. And now that can continue to run 24/7 even when they're doing other things with their desktops. So is that the kind of thing that the remote agentic nodes would— Yes.
+
+Joey Williams
+Yep, exactly. That's a perfect— Yep. Yeah.
+
+Puru Agrawal
+So like for our guys, right, like there's nothing that prevents us from spinning up a couple of VMs in AWS or Azure when we're doing a big chunk of work and just like letting the workloads run there instead of running on your local.
+
+Joey Williams
+Yeah, exactly. Yeah. Like you're spot on. The only, the only like potential issue I can see there is that you would need a way for the mesh, like whether that's a VPN or what have you, but CuddleCode just has to be able to interact with that VPS. Yeah, but as long as that's good, then yeah, it's— then it is good. So yeah, you're spot on. Trying to think of if there's any other features. I think we kind of covered all the cool ones, Chris.
+
+Puru Agrawal
+That might even be something to kind of noodle on at some point down the road for Team AI, because right now, like, you're okay because it's running on NimbleList and Git and blah blah blah. You have to set up all this stuff on a local machine, right? And then you could say like, hey, you go into Company X or Company Y, and in their environment you just spin up like 5 VMs for various individuals. And that way when people need to go and do something, it just like uses one of those VMs and sort of like redirects them to that, and that way they don't have to have anything on their local machine. They could just have like these box carts pre-provisioned, then start using them, right? And it's the same concept, I think, as what Joey is showing us with these RAMs, except you'd be using them for Team AI.
+
+Igor Kostyrko
+This is really, really cool, Joey.
+
+Joey Williams
+Thanks.
+
+Igor Kostyrko
+Yeah, probably the last thing, a question: any helpful plugins, anything about this? I think we didn't cover this.
+
+Joey Williams
+Okay, yeah, I can Yeah, if you click on browse, I just went ahead and built in the other ones that my buddies have made. We don't have a store. I kind of like, I don't really know if I want a store because like, I don't want to have to deal with the security vulnerabilities that can kind of come with that. But yeah, I can get you guys the documentation on the plugins.
+
+Igor Kostyrko
+So if you want to do our own plugins, right, then import them here. Yeah, absolutely.
+
+Joey Williams
+Yeah. If you want to see what it looks like, I mean, I think it'll work, but if you click on install and like the ComfyUI, well, I don't know. I think you may need ComfyUI installed for it to show you everything, but it like you have the ability to like show whatever type of UI you want in here. Uh, this is all custom to like that top section. Uh, basically here, this section is static for Cuddle Code, but all this down here is all whatever you want it to look like.
+
+Igor Kostyrko
+Mhm, got it.
+
+Joey Williams
+Like you could embed the full Team AI thing in here if you really wanted to, but Yeah.
+
+Igor Kostyrko
+Okay.
+
+Joey Williams
+With the ComfyUI, I, my, I know that like the artwork actually shows up down here as you're going through and doing stuff. I don't know if you've used ComfyUI. I haven't personally either. I just, I've only seen it used through my buddies. No, I didn't.
+
+Igor Kostyrko
+Okay, thank you. I think we did everything we could. I mean, for, for the time we had.
+
+Joey Williams
+Uh, Perut, is there— and I know Alex had to leave a little early, but, um, do you feel like you got everything you wanted to get accomplished in this meeting accomplished, or are there any gaps left?
+
+Puru Agrawal
+I think we did, and then Our guys are going to go in and start using this and try to see how much progress we can make tomorrow and Friday morning. So we have sort of a check-in session with you Friday at noon, right? Yes. And I think that'll be perfect opportunity for us to say like, okay, now we've been using it. These are the things that are working. These are the things that are not working for us. And like, you can help us troubleshoot anything that we're doing wrong, right? And then, you know, hopefully with that we're sort of on our way. But worst case, we maybe set up one more follow-up session with you like later. And then I don't know if you were able to confirm whether you and Alex could meet with Jason and me on the 20th. In Austin?
+
+Joey Williams
+Um, I, I am confirming with you that I will be there. Uh, Alex said he will. He's double-checking with work to make sure he can get off. Uh, so he has his attention on this.
+
+Puru Agrawal
+Okay.
+
+Joey Williams
+Um, I haven't heard back from Chad yet. Uh, but I will keep you in the loop on on Slack. I can reach out to you on Slack, right?
+
+Puru Agrawal
+Yeah, that's perfect. And you can also just contact me on my mobile, so I can give you that on Slack as well. Okay.
+
+Joey Williams
+But yeah, as far as your flight goes, like, yeah, we can— Austin works out well. Well, I'll be in Austin.
+
+Puru Agrawal
+Okay, that sounds perfect. Thank you.
+
+Chris Naso
+All right, we'll pick it up Friday. Joey, thanks for the time, man. Appreciate it.
+
+Joey Williams
+Yep, thank you guys. All right, bye-bye.

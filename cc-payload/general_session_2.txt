@@ -1,0 +1,315 @@
+FSG AI Huddle - Continued
+
+Date: 10/6/2026, 7:29:14 PM • Duration: 1h 29m
+
+Participants: Stas Skorobogach, Adam Haynes, Puru Agrawal, Joey Williams, Alex White
+
+Grain URL: https://grain.com/share/recording/0ed45d0a-4fd1-4699-8c76-f5e38ba5057a/3tka0bCjgzWIyNpu8iX1Mosxzebq0M7I2KRqjoMf
+
+--- TRANSCRIPT ---
+
+Stas Skorobogach
+Hey, estas.
+
+Adam Haynes
+So, yeah, I called in one extra ringer, so I'm glad you let him in.
+
+Puru Agrawal
+Ah, yeah, sure. How's it going, Alex?
+
+Adam Haynes
+You're muted. If— or maybe you didn't— you're muted. See, I was just talking to Joey. He should be on.
+
+Puru Agrawal
+Is it raining up in Austin?
+
+Adam Haynes
+No, it's beautiful right now. It's like low 70s and sunny. Nice.
+
+Puru Agrawal
+We are getting a decent amount of rain this week down here in Los Fresnos, which we have desperately needed. The question is, are we done with the heat for the summer, or is it coming back next week?
+
+Adam Haynes
+I hope we're done. I hope we're at least done with like the 95+.
+
+Puru Agrawal
+And me too. I just don't believe it. Last year it stayed in the 90s here almost through the end of November. Yeah, that's too much.
+
+Adam Haynes
+Yeah. All right, yo, he's on a minute late. He'll be here shortly. Um, did it— did any of anybody on your team download it and play with it at all?
+
+Puru Agrawal
+Uh, so we have definitely been looking at it. I think Stas and another guy Igor are downloading it. Uh, and then like, I guess we found this Restart Labs, which is a company you guys are working with, that's using this, right? That is you. Okay.
+
+Adam Haynes
+It's just that, I mean, that's, I mean, more, more accurately, that's Alex. Okay.
+
+Puru Agrawal
+And so I think, you know, we were looking at downloading this and trying to use this in our own build processes. And I think some of the questions that we had, or that I had, and I can't say I'm speaking for all of us, is Yeah, so there's a lot of tools that are embedded right in Cuddle. And so like, is there a particular methodology that you guys are using in the builds where like you use various tools for specific things, or is this more like Hey, as we build stuff, these are the tools we use frequently, and so we've kind of grouped them together into this single umbrella where they're all available, and then we're using certain tools like LLM Wiki, etc., in order to share context and share memory.
+
+Joey Williams
+Um, yeah, I can I can speak on that. So just because you mentioned the LLM wiki, the biggest advantage we have with that is when you're starting a session while you're typing the prompt, we support like several System 1 models. So like Jev, Leia, CLM, Clef, whatever, you know, and it'll, while you're typing your prompt, go look through the LLM wiki and piece through exactly which articles are needed to give enhanced context to your session through prompt injection. Like when you press enter, it'll get all the way down to the line numbers of what additional context is needed. So it doesn't bloat your prompt or anything, but it does give your session the additional context. As far as the tooling goes, if we find ourselves not using a feature, it gets stripped out pretty much. What we have left is pretty concrete in what we use daily. If just, yeah, like everything left is kind of a power feature. That, with that being said, like the the flow of how I can stream, if that helps. See, oh, where did my screen go? Okay, I don't know where the stream went, but we see the screen. Okay, so typically how we work now is we have I just did this a second ago. I wasn't really prepared to give a demo, but sure, I just asked a session real quick to like come up with a problem and generate the scope of work documents, assume they're approved and get started. I want to showcase automations and pipelines. And so this is what it's doing. The, the cool thing about CuddleCode is every session is aware of every other session within your workspace. So like, for instance, last night, I, I have pictures of this. I suppose I could show those pictures, but I had started 2 sessions accidentally stepping on each other. I did not have an orchestration session. And because of the way cuddle code works, those 2 sessions realized they were stepping on each other's toes and they started talking back and forth to each other and coordinating. Let's see. You can probably just resume that session and find it. It was not that one. Hmm. I think it may be this one. It's not that one either. Well, I have screenshots of it. Uh, I've been working a lot on these projects, so everything's kind of a little bit over the place. But, um, did, did you want me to elaborate any further on your question? Like, what, what exactly? I, I know for you it's hard to like come up with questions that you don't know what to ask.
+
+Adam Haynes
+But like, I go, go through the typical like workflow from like start to end. Like someone has— like you get asked to tackle a feature, what's your approach? Um, like do you actually use the intents very much yourself? Things like that.
+
+Joey Williams
+Um, I use intents for like, uh, 4 days ago is the last intent I had made. Um, This is not work related, but, uh, I mean, I guess I can talk about it. Okay, um, I won't judge you. So inside here, let me find one that's actually— so, okay, our plugin system for Cuddle Code. Uh, the way I had started this was I, you know, opened a session. I said that I wanted to add plugin support to Cuddle Code, and I wanted it to be in the style of VS Code extensions. And it generated— and I told it I wanted it to be an intent. And I went back and forth in this session quite a bit, but the whole point of an intent is to have the history of what you're working on as well as the plan documents. So With here, you can go to the history. This is all the sessions that it spawned. You can, like, you can drill down and find these sessions. You can resume them. You can talk directly. Oh, wow. Of course, I've actually never seen this happen. And I know Alex is probably facepalming, but you're freaking supposed to be able to talk to this. Unknown provider connection on personal. So that's a bug. We just added where you can support multiple subscriptions on the same, for like Claude Code, we have like, this is my FSG subscription, this is my personal subscription. And when you're starting a session, you can choose which account to to use. Let's see, intents. Yeah, so one of the cool things about intents is if this wasn't done yet, like this one isn't really started yet at all. Let me see if I can— if there's one that's And why migration? Okay, so we— this is kind of a good example because it's work-related. I had created this intent which created all the planning documents, and I gave it to our coworker. And if he wanted to drive it, and if he hadn't, you could have just driven it from here, starting a session after I get that. That's working now. Great. Okay. So you could just say you could orchestrate and drive the entire session from here. Alternatively, if it's a fairly simple one, you can arm autoplay and it uses a System 1 model to decide what the next step would be. And then it executes those steps. And all of these sessions appear over here. Intents does not Like Intents isn't for everyone. It's kind of like it doesn't necessarily enable you to do anything different than your normal like development through AI approach. It's, it's mostly for class like categorization and keeping your ideas and planning documents all together. If there are files, a files tab shows up here and you can see all your files. But I've found that the people that tend to use this feature the most are project-oriented, like project manager-oriented people. Like my brother, my brother uses it almost exclusively. You can see how I used to use it all the time 2 months ago and stuff.
+
+Stas Skorobogach
+So are they Like some analog of plan mode for like in ChatGPT Codex?
+
+Joey Williams
+So it, it's a little bit like plan mode, but the difference is you can have deep research, you can look through your own LLM wiki, it, you can do cross-model stuff. It, it, it is fundamentally almost the same thing as doing an extensive plan mode. You're just not losing that information after you're done planning. You're not being like, oh, where did that session go? It was 2 weeks ago. Like, you can just go find it here. So it, it doesn't, like I said, it doesn't enable anything new. It's just helping you stay a little bit more organized.
+
+Alex White
+I would add that it also, just because it's in Cuddle Code, you get a lot of, like, of the nice orchestration stuff out of the box. So, like, if you're chatting with that little chat thing that Joey was showing, you know, you could say, you know, spin up a session to, like, review the work or whatever, and it would, it would launch another session. So it could launch multiple sessions, and they'll all be grouped together. Like under one single spot, which is just nice for organizing.
+
+Joey Williams
+Yeah. So for here, you know, this was my original ask for that demo. I had said near the end, spawned a new orchestration session to bring this to fruition. Use whatever model you deem appropriate for the sub-agentic steps. And then here's that session. After I did a little bit of planning, it spawned that session. You can click on it. This is what it's doing. It created an MD file that we can go look at in a little bit. The way you would go look at that is you can go to your project and you can go to your files. And here's that file. It'll be easy for us to add like a quick link where if you click on it, it just brings you here. We just— simple. We just haven't done it yet. But let's see. You want to— you want me to show Alex? You think RAN, the concept of RANs is cool?
+
+Alex White
+Yeah, definitely. But also, like, is there anything worth calling out on how you guys use, like, pipelines? At all at FSG, or, uh, yeah,
+
+Adam Haynes
+I think, like, finish your life cycle of a story from, like, so you've explained how intents happen sometimes. How do you personally then, either without, with or without an intent, walk it through, like, creation, PR gets created, and what, and what, what do you personally do?
+
+Joey Williams
+Um, so After, like, you know, I spawned this one and I asked it just to see where we were at. You can see intents are handled differently over here. You have the, like, all your sessions are grouped within the intent. This is that chat session. You can see whenever I click on it. kind of highlights. This is just a separate session. And it is being orchestrated by the intent like this. This whole thing is generated. Yeah. And it starts working. So this one is saying, you know, here's where we, where we are with this. It looks like it had made some PRs already. I can click on this. I just don't know if you guys can. I'm not streaming that, so you can't see it, but let me move and go back. And if we were in autoplay, so yeah, this intent session was a success. We're getting notifications for that. A draft PR had been opened. We can go back to this intent. The— we got some changes here. These were the last changes that I just hadn't seen. So yeah, it— this is in draft. Let me verify this. Yeah, it is in draft. So I can click ready for review. And now you— I wish I was streaming my whole screen, but that PR went from draft to open, and now it's ready for review on GitHub, and someone else can review it, or I can review it, merge it. For Cuddle Code, it, it is a very self-developed app. We have pipelines, and for instance, here's our PR merge pipeline. And what this does is it goes through all of the PRs. There's a foreach body here, and for each PR that gets passed through, these body nodes are what gets executed. So in this node, it's using an agent called PR Shepherd from our project, and PR Shepherd spins up an isolated work tree of the app with the— of the branch of the app, and it goes through and it tests the intent and the functionality of the PR. And if there's any issue, the PR engineer fixes it, and it does this little loop for each of those, each PR that it Enumerates over.
+
+Adam Haynes
+Uh, Joey, hey, go now, go show what makes those agents not just running. Like, why is an agent not just another session?
+
+Joey Williams
+Why is an agent not just enough in this?
+
+Adam Haynes
+Uh, like, like, we, we have quote-unquote agents in cuddle code. Show, like, show that PR Shepherd and, like, what it has. Oh, I see.
+
+Joey Williams
+Okay, so PR step, we have like, this is the Cuddle Code project. It used to be called something else. So, but this is Cuddle Code. Here's all of our agents that I use. Feature implementer is a heavy one. It is basically the agent we use for anything to implement into the app. It does what the PR Shepherd does, but at a larger scale. It handles testing and records your screen. So the PRs have recordings in them showing exactly what the app is doing before and after. But like PR Shepherd, it's not just a prompt like agents are in traditional harnesses. Like, here is that portion. We have the traditional prompt. But at the agent level, you can choose models. You have your tools. You can allow or disallow specific tools at the agent level. You can handle memory differently if you want to. This is a little bit older. It is also functional, but because of how I just personally use Cuddle Code, I just leave it on the default because I may want my Cuddle Code to be able to interact with projects outside of its, like, scope just because I'm developing on it. But like, if you were in an enterprise environment and you only wanted someone to use an agent and you wanted to lock that agent down to not be able to talk to anything else, yeah, you would just use local or project. Or if you want that user to only be able to use their own projects for that user, you just lock it down to the user. If you do background task, it doesn't show up as a session anytime it's ran. And then you can assign skills, MCP servers, all, all to this agent. But yeah. And if I were to like export out this agent, I don't know if you can see that, but it downloads a zip. And if I open this zip, it will have the agent as well as all of the skills. Associated with it automatically in the zip. And then you can just give that to a buddy and say, here's, you know, what I use, import this into your project. There's something else though. I can keep talking. We have cloud sharing. So if I wanted to, I could type in like walter.alexy@gmail.com. Tom, and I could share this, uh, with him. And I can copy this link, send it to him, and if he accepts, this project will show up in his Cuddle Code, uh, and he'll have all of— it'll show
+
+Puru Agrawal
+up as a copy or it'll show up as a shared project where you're a shared project?
+
+Joey Williams
+Yeah, you're both modifying that project going forward. Um, so he, he can then have access to all of the skills and agents that I have if I gave him editor access, which I in that example, then he has access to make changes to those agents and skills. Another cool thing, like when you have a Cuddle Code project, most of the time people start their sessions within the repo of what they're wanting to work on. The thing about Cuddle Code is you start the project, or you start your session at the project level, at the Cuddle Code project level. You can start it at the repo level, but if you start it at the project level, what it allows you to do is have that session has access not only to your LLM wiki if it needs more information, but it has access to the repos as well because you can add multiple repos into the Cuddle Code project. We also have this context, like, context analytic viewer. So whenever I start a new session, I'm roughly including 2,700-ish tokens every single time I start a session. That, I mean, that's not actually that much, but like, it's good to know. You'll get an alert if you go over 12K. That's just a You can configure that. It's actually an environment variable, but it does default to 12K. And that, that came from an interview I saw with Boris Cherny. So that's where I got that from. But you can go down even further and you can look at your, like, if you're using Claude, that's just the context and the Claude, your project repos, agents, you know, just context analytics. Uh, let's see.
+
+Adam Haynes
+Finish working through your workflow.
+
+Joey Williams
+Okay, so, uh, let's— I'm trying to figure out what, uh, If this was done, which it's not yet, I like— what's, what's silly is I feel— I mean, I am on the spot, but I like, I don't have anything. So like, let's Let's try this. We can add a new feature to Cuttlecode, I guess. Do you have anything?
+
+Adam Haynes
+The automation you were walking through, I steered you off to show PR Shepherd, but show the rest of the pipeline.
+
+Joey Williams
+Okay. So after, inside of the, after the for loop, right? It— all of the PRs that enumerates over should be either good to merge or, or not good to merge. The merger agent is just instructed to decipher between those 2, and it will merge the ones that are ready to merge. And then at the end of this, I get a notification on Discord Of the status of everything. What was merged, what wasn't merged. And this doesn't have to be Discord. This is just what I use, but it could be Slack, NTFY. We support web push, email. And, and if you have like the Slack, like I mentioned Slack, if you have the Slack MCP set up, then it could just be over MCP that it's doing it. We have a, a buddy who uses Hermes. So like, we created this custom webhook so Hermes could get notifications. It doesn't have to be Hermes. It's just we made it for Hermes. But so like, we can, we can run this if you wanna see what it looks like running. I think this takes a little bit. It takes about— yeah, we're not gonna run this. The last one took 4 hours. But I can elaborate on why it takes so long. It's because of how thorough it's being. Like I said, it spins up for each PR. Oh, I guess this is a good time to mention RANs. So there's a thing called RANs we have in here, uh, set remote agentic nodes. So what this is, is it's powered by Kubernetes, a lightweight version of Kubernetes called K3s, and you can have an orchestrator for the cluster, and then you have your nodes. And like, it's, it's fairly simple once everything is set up, but when you start a session, it can be in this paid demo, and you have RANs enabled, and you leave it on auto, or you can pin it to another machine. When you start this session, it's going to spin up a session on that machine. You can see that it gave it a little bit of a different notation. It takes a little bit longer because it's setting up basically an isolated curated environment, Linux environment of— for this session.
+
+Adam Haynes
+Yeah, it is.
+
+Joey Williams
+It's spinning up a pod. Yeah. And this usually takes like 30 seconds or so. But what it allows, what it— the problem it solves is you're no longer restricted to the server resources of the host of Cuttlecode, right? So this isn't inferencing, this isn't local inference. We do have that, but this is local, this is resource compute scalability basically. If you want your whole team to just be able to hammer at a project, this is This is it. Here we go. So yeah, gave us a temporary workspace. Yeah, and we could just run with this. Yeah, let's see. Oh, so I had asked this earlier to create a pipeline. This is it working on that pipeline. It's actually running right now. So Cuddle Code can create its own pipelines. It has full— we have a CLI for Cuddle Code. So anything you can do visually, you can ask a session to do. Like any, like literally anything in Cuttlecode is available in the CLI. So yeah, this is it running. We can go to the live view. This is it. So it's going through a foreach of something that it created in that spec document.
+
+Alex White
+And I'll just ask the session, what is this? What did it do?
+
+Joey Williams
+Yeah. Running review on work package 3 of 5. I'm just gonna let it do its thing. Let's see. So we have automations. Which most harnesses are getting to the point where they have these. But when you create a new automation, you can make it a cron job, a normal every 30 minutes, or it can be a webhook. And there's a, there's a lot in here. Like you can choose the agent. Let me select a project down to specific repo. Um, we have a thing called Ralph. Well, Ralph loops are, are not our thing, but we do have a thing called a Big Ralph. Uh, I don't know if we want to get into that, but, um, you can have it run the auto— Joey, so get into it.
+
+Adam Haynes
+What's, what's that? You use Big Ralphs a lot, so get into it.
+
+Joey Williams
+Okay. So do you guys know what Ralph loops are by chance?
+
+Puru Agrawal
+So I looked them up yesterday after Adam told us about them. Okay.
+
+Joey Williams
+Yeah, they're, they're by themselves, they're already like pretty powerful. It's basically just a looping algorithm on, on how to accomplish work, right? What Alex and I did was we took it kind of a step further. And it's, you can think of it as recursion on the RALF loop. So every time a normal RALF loop is finished, there is a skeptical outer layer that this is the inside of a RALF loop. So when you say, hey, I want this XYZ done, it creates, it creates a plan, which is the PRD product requirement document, I think. And it, it separates those out into individual steps. And then it will run a session to accomplish an individual step. It judges that step. If it has any issues, it re— it works on that step until it passes. And a Big Ralph takes the Okay, this is actually a good one. So a big RALF, it kind of takes a step out and it runs a single RALF loop. And then whenever it's done, it asks itself, is the intent of the original goal solved? And you usually want your judgment here to be like as frontier of a model as you can get. So like Fable or, you know, Astra, whatever. And in this case, it failed, right? So it did a Ralph loop and, and it, it has its reasons. I'm not gonna read this whole thing, but it failed and it creates some notes. It refines the goal while maintaining the original intent, and then it starts a new Ralph loop. What's silly Is I said this was a good one. This one isn't a good one. It failed, and I must have stopped it. But let me see if I find one that actually— here we go— succeeded. That one only has one step. Here we go. I built this site for my buddy. Alex, do you want to talk on this graph view? Because you, you made this.
+
+Alex White
+Yeah, we're still kind of working on some of the UI here, but you can also configure it to work on different waves of work at a time, and then sometimes some work will be dependent on other work, and it's more easy to see as it's actually happening, but sometimes you'll see like these nodes will be linked together. You'll be able to see like an overall high-level picture of which work depends on other work. This one's not a great example, but yeah, overall in my experience, like these, these, these loop automations are phenomenal for things like optimization. You know, you give it a task like, you know, lower the load time of my site, you know, to X milliseconds, and it'll just keep chugging along until it gets there. I've had really, really good results with that kind of thing.
+
+Joey Williams
+Yeah, and just to show it, this is what the end result looks like. So on this one, it had the Big Ralph iterate 3 times in total. The first 2 it kept having. And, and so like, just to elaborate, normally a bit, a, a Ralph loop, like it would say it's done here. Like normally it, it's done. And the big Ralph is just saying double check your work essentially. And, and that's included in the loop until it passes the original goal. And then at this point it would, if you're driving the big Ralph from a session, which you can, 'cause it's part of CuttleCode, At this point is where you can say create a PR. I believe you can also have that as the— maybe I'm thinking of intents. Oh, yeah, I was thinking of intents. With intents, if you create an intent, it can use Big Ralph's— it, like, the autoplay knows how— knows everything about the Cuddle Code CLI, and you can just say drive this all the way to a PR, and if that's selected, it will keep chugging along until a PR is created. Let's see, I was on automations just to show Let's see if I have a I don't know if I— the— so I do have an automation that was the— I was using it for an old project I was involved in, but I'm not involved in it anymore, and I think I deleted it. But here's just an example of an automation that is triggered over a webhook. So like it gives you a curl example. I'm over Tailscale, so it has my full Tailscale route in here, and you can just copy this and it has the extra stuff in there. When you're creating the automation, let's see. You can allow concurrent runs. So like, it sounds silly, but at first when we were doing a project for FSG, we— I went like a couple, I don't know, probably like longer than a week where we were processing these work orders and I thought we were only processing like 10 a day. But in reality, it wasn't concurrent, and it was just— so, like, that's disabled by default. I'm not sure if that should be enabled or not, but I just wanted you to be aware of that. Let's see. Are you using the PR view, Joey?
+
+Alex White
+Oh, yeah.
+
+Joey Williams
+So Here's the PRs that I own for the projects that are in my cuddle code that are still sitting in GitHub. So, and it ties you to the sessions of what that PR was. So like I can click on this and it brings me right to that session and vice versa. I'm in the session, I can see that This is the PR, and I can click on this. I know you guys can't see my screen, my Chrome, but the PR just opened up over there. It's simple, but like, again, organization, it's all here in one spot. Yeah, I use that.
+
+Alex White
+I use that feature personally, like, all the time. Yeah.
+
+Joey Williams
+Yeah, I do too. Let's see, we have computer use as well. You can— let's see, screen unavailable. Oh, let me— I'll turn the computer on real quick. That's weird. So you can see the mouse. I guess the monitor— I don't have a monitor hooked up to this one.
+
+Alex White
+Here, I'll— I didn't even know we supported that, actually. That's awesome. I haven't used that feature yet.
+
+Joey Williams
+So, hmm, I'm trying to figure out the best way to showcase this because I use this heavily. I feel silly talking about this, but I'm making a mod for a game right now. That game is called RuneScape Dragon Wilds. And the way I, I have the end-to-end— we're all nerds here, you're okay.
+
+Adam Haynes
+Okay.
+
+Joey Williams
+All right, cool. The way I have the end-to-end testing working is I have a separate machine that has the game installed on it, and I come in here and I say what I want it to do, and it has an agent with project or with, uh, skills to know how to use the computer use in such a way where it is navigating 3D space in the game. So it'll walk around the game, it'll, it'll place objects, it'll interact with chests, move items around. And it's all doing it like pretty dang quickly. The only part it stalls on is whenever the LLM has to think, but the actual driving of computer use is now, I don't know, is now driven by Clef Flash, which is a System 1 model from Cloudflare that actually supports image input into the System 1 model. So if the LLM says like, we need to go place a chest, we need to interact with that chest and deposit our items into that chest, The LLM comes up with those instructions, and then Clef brings that through execution all the way. And like, I don't— I kind of like don't want to bore you guys, but let's see. So this, this will take a little bit, but if we're here for probably like 10, 15 more minutes, it'll, it'll be done by the time we're done. See. So this is on its 5th or 6th iteration. So you can see it failed to make the pipeline the first time around, and it's just figuring itself out. It gave a reason why it failed. Same thing here. This is all being brought back into the session. The reason it's so condensed is we hide— well, it's not by default, but I hide all of the, like, tool calls that it does, mostly because I found that I went several, probably several months without looking at the tool calls anymore. And it just got to a point where I want to see what's important to me. And to me, that's with everything hidden. Oh, I know, I know a feature that's kind of cool. So let's say this is fixed now. But I keep having to— I'm not— I'm 43 updates behind. I've since fixed this past sessions not scaling properly, but you can look up all of your sessions by PR number, filter by project, you know, what you would expect to do, you can do. But if I click on a a session. Trying to figure out which one is small enough.
+
+Alex White
+Uh, you should be able to also search via full-text search. So like, right, so you could search for like any words that appeared in the transcript itself of the session.
+
+Joey Williams
+Yeah, these happen to also be in the title. Yeah, I don't, I'm not, we should probably like come up with a full freaking demo. But like, let's say we're looking at, gosh dang it, that opened up a new tab. This is the screen I was trying to get to. Okay, so let's say Claude went down. Like you're using Claude and Claude Anthropic goes down. You can close out your session and come in here and click continue with model swap and you can choose another provider. And this, I mean, it's slow. But because it's having to prefill to a whole other provider, right? But it means that you are no longer, no longer down, right? Like, this has came in pretty clutch a handful of times. But it, I don't know if you guys have seen like the way the, like an LLM session gets serialized. But it goes into sections. And so it just moves all of those sections into the prefill for the new model that you have selected. And that's what this is doing. It'll do it in the background. And whenever it's done, you'll have a new session here and you can just continue your work as if like you're on a different model, but as if you're not disrupted anymore.
+
+Adam Haynes
+I didn't know you did that or that that feature was there. That's actually when I, when I run out of my Codex allotment for the month, Yeah, that is useful.
+
+Alex White
+Yeah, I was just last night, I was, I had an orchestrator running and it was, it was spawning a bunch of different sessions overnight. And it automatically detected when my Codex usage ran out and then it started spawning, you know, everything on my Claude subscription instead, which I told it like ahead of time. I was like, hey, this might happen. And it just like did it perfectly. It didn't, I don't think it used model swap. Probably could have if I told it to. Yeah. Joey, I think we've left out one of the most important things that we use every day all the time, which is mobile. Oh yeah. Everything he just showed you, you can do on your phone.
+
+Joey Williams
+Yeah, the mobile experience is like phenomenal. Let's see, I can kind of show what that looks like here in a way, but like this is This is the mobile. Can I get rid of this? I guess I can't. Okay.
+
+Alex White
+Yeah, you won't see that ugly top bar.
+
+Joey Williams
+Well, that top bar, and there's also all these like, there's these 2 Zoom call things on top of my screen that are getting in the way of stuff. But like when you interact with a session, Like it, I mean, it is a mobile experience that you would expect. Yeah, like I don't know what else to say about it. You can see your intents. You can scroll through everything. You got your changes. My phone's bigger than this, but like the Yeah, this, this is like a little more condensed than what we see on like our high DPI phones. But yeah, like you, it is, it's an Electron app, which comes with, you know, a little bit of baggage, but you get all of the benefits of it, right? And, and it's, it is fundamentally the same exact app on mobile. And if you're using Tailscale, I, Like, Adam knows this, but like, I can quite literally like leave my whole house and go up to the lake and be as 100%, like, not— I'm not compromising— 100% as, uh, as efficient as I am at the house because it's the exact same ecosystem I work through. Um, I kind of want elaborate on something that I do that no one else at FSG really does this. It's just unique to my setup, but I host CuddleCode here at my house for me, like my version of it or my instance of it in my network closet. And I don't have CuddleCode on my FSG MacBook because I didn't want to have to manage multiple instances of CuddleCode to do FSG work. Personal project stuff, other project stuff. So how I handle it is I have, we have orgs, and if I switch to the FSG org, I now see just the projects that I have for FSG. You can have mono repos, which can have subprojects in them, by the way. You can have mono repo Cuttlecook projects. And they're fundamentally the work the same way as a normal project. But in this example, here's all my repos. Here's the agent and skill that I worked on for a new project. I was apparently using this intent. Oh, this is the intent I had given to a coworker. But whenever I come over here to start, like, you can see it, I'm now self-contained within a different org. Like, all my, if I go to my GitHub, I can look at workspace overrides. So I'm logged in with my personal GitHub, but for the FSG org, I'm overridden to a different GitHub account. This is my FSG GitHub account. So anything I do over here, it's going to be on that GitHub account. And oh, this is where I wanted to go a second ago. Let me go back to my projects. So because we have our stuff on a VPN, at FSG and my CuddleCode is not on my FSG laptop. You can have things in CuddleCode called remote hosts. And this is the only one I have for FSG. I'll just show you what it looks like for normal. But like for my home environment, I have all of these remote hosts. And all this is, is a trusted SSH connection that gets established and saved within CuddleCode. When you're setting this up, it's like pretty dang seamless. I'll just take, I'll take one off here real quick. I think I remember this. Password. No, this is the Mac Mini. So I filled out the username, the IP address, I gave it a friendly name, and I can type in password to this, or I can, if I'm remoted into that machine or it's next to me, I can just run this command. But if you have the password, it will install it for you. It'll do the key installation for you. And then now you have a remote host. And what, what this allows Kuddle code to do, because it's in the Kuddle API, you can send commands to this machine. If, if, if you've given the user, like you can also go all the way down to user restrictions for this. Too, by the way. But this is how this Dragon Wilds mod is working as well. It uses computer use, but it also uses remote host to talk to the file system on the machine rather than having to like open up File Explorer visually, modify files visually and stuff like that. I'll go back to FSG. So with FSG, um, in this project, this agent that's called FSG DevBox, uh, I'm just trying to, to show everything together. Uh, this agent has instructions on how to use remote host over my local network to talk to the FSG VPN. I do have to manually remote into my FSG laptop and 2-factor authentication to get onto the VPN. So like there's still human, human in the loop there. But once I do that every day, because it kicks me off every like 6 hours, I can then use this agent to do several SSH hops to do the work that I need to do. Am I like— I've never really articulated this in full to anyone, so if that doesn't make sense, I can elaborate a little bit more. But do you follow me?
+
+Puru Agrawal
+Vaguely.
+
+Joey Williams
+Okay.
+
+Puru Agrawal
+I think— go ahead. Yeah, just because we're kind of at the top of the hour, like, I wanted to ask some questions, right? So one, like, this is a pretty incredible harness and toolkit that you guys have created. And so, you know, I know you're using it for internal FSG stuff, and then obviously you're using it yourselves. Like, what is your goal for this tool? Um, is this something you're looking to make available externally? Like, obviously there's the download capability for beta. Is this something that you guys are looking to provide consulting services around? Is it something that you know, you're expecting to train other teams on how to use?
+
+Adam Haynes
+I— you want me to answer that question, Alex?
+
+Joey Williams
+Yeah, yeah, yeah.
+
+Adam Haynes
+I, I think so. Joey and Alex work— so Alex doesn't even work for FSGs, he works somewhere else, and this is just— he's one of the external people I was talking about that's on this project. Uh, those individuals at least at a dream state, would like to consider seeing if someone just wants to pick it up and, and someone else make it into a business, basically, um, is, is one of the possible paths they have for it. When it very first started, it was like, this is cute, it'll be a nice little open source project. But then, like a lot of things in life, once you get down the road, you put a lot of work into it, you're like, I don't know, this has a lot of value. Am I sure I want to just give this away? Um, right. So that's kind of where they are now, um, is if there's an opportunity to turn it into something in the market, which there likely is, um, they, they are trying to explore that.
+
+Puru Agrawal
+So I imagine that there's significant opportunity, right? Like, I think when I look at how our team is working, then you know, folks are intensively using AI, but there's not necessarily a lot of consistency in how they're intensively using AI. And so they have different tools, different best practices, etc., etc. And there's value to that, right? But there's also value to kind of having a set of processes and best practices that the team kind of standardizes around and sort of a tooling that folks can use where they can also expect to help each other out with, etc., right? And so from that perspective, like, this could be something great for us to use as we're building systems for various organizations. And then the question becomes, you know, if we get trained up and adopt this, there's clearly significant value to us, and then we can certainly figure out how to turn that into value for you as well, right? I think some of the things that we'd be interested in trying to understand more about, and maybe you just said this a minute ago, Adam, is are you looking to be the ones to maintain and enhance the product and then have others maybe using it with fees paid to you or rev share paid to you, or what? Right. So I think those are kinds of things that I would like to understand. And, you know, it's not like you don't have to have all the answers because, as you said, like, it's early stage.
+
+Adam Haynes
+But I think the answer is don't have all the answers. Don't know what shape that really takes, right?
+
+Puru Agrawal
+Um, is it worth having a discussion? Yeah, it absolutely is.
+
+Adam Haynes
+Yeah. Okay, that is one of the things. I mean, these guys are young and ambitious, and everyone likes to get some fruit from something cool they did, which most developers never get to do, right? Most developers end up doing a bunch of side projects that never go anywhere, and they get paid for their day job. Um, so, you know, have an opportunity to maybe strike something every once in a while is a cool opportunity. So yeah, that's definitely a conversation worth having with you guys and whoever else makes sense for how that could— the different ideas for how that could work.
+
+Puru Agrawal
+Yeah, I mean, I think part of it is, you know, us getting a better appreciation of how best to use this tool. Maybe there's a way that we can attack that together. Maybe it's like, hey, let's do a small 2-day project or something where we come up with kind of a theoretical system that we're trying to create, and we just go and bring it together and kind of work through the different steps. Uh, there's the conversation about, okay, like, let's say that makes a lot of sense for us and we love it, and now we want to go and start using this, like, with various different solutions that we're building for clients. And so what does that relationship possibly look like, right? And then like over time, is there an expectation that the tool and the ecosystem is kind of being supported and extended, or is it kind of thing where it's like, okay, there's some sort of a consideration paid up front, but then it's like we gotta go and maintain this ourselves or something. Like, I think just working through some of those things would be very interesting for us. Yeah, for sure.
+
+Adam Haynes
+I agree. Yeah, I don't— no, no answers to be given at this moment, I think so. But yeah, definitely the— those are the things to figure out. Because, okay, I can tell you whatever, whatever the model becomes for this, and I think I speak for Alex and Joey and hopefully the rest of my team, um, the part of it that started and continues to be this is how they get their day job done, um, it's not something they want to lose, right? So they're not looking to like, I have offloaded this and I can never use it again. Without— yeah, for sure— back to myself or something. Um, so that, that's not what they have any immediate goals around. I think there's a lot of hesitancy around, do they really want, or do we really want to run a SaaS business or a, or a licensed software business? Because that comes with a whole different amount of time and energy that isn't making cool software, right?
+
+Puru Agrawal
+Right. So I have 2 immediate short-term but highly complex projects that we're looking to take on, right? And it feels like we may have a lot of the capabilities through this harness to significantly accelerate those projects. Maybe we could talk about what those projects look like. Maybe there's sort of an initial kind of advisory relationship, obviously with compensation, etc., on kind of helping us work through those projects with our goal to deliver those projects, but also kind of learn best practices here, right? And then either in parallel or after or whatever, there's a conversation of how do we continue to get access to this kind of thing, right? And maybe that's like, hey, you know, we get X compensation for you guys using it. We obviously use it and own it. But then to the extent that you need something that we don't have time to support or whatever, you're free to go in and make your own enhancements to it or whatever that ends up looking like. Yeah.
+
+Adam Haynes
+And I, and I'll tell you personally, I'm still interested to see Anna, which for Alex and Joey, that's their Altus Nova— I don't remember what the other A stood for. Um, assistant. Assistant. Oh, I see. Which is more of the front of the process of planning, approval. Yeah.
+
+Puru Agrawal
+So Anna is probably a context engine that's feeding into what we call Team AI, which is more of the specifications development and collaboration capability, right? And then those specifications ideally feed into the build process. I think it'll be interesting to try to figure out, like, with things like intents and stuff, like, how much overlap does there end up being between what you can define right here on the fly versus what comes sort of predefined, right? And so like from my point of view, I'm looking at this with a pretty open mind. Like, hey, if there's things that actually work faster through this framework that we can pull back into the Team AI framework, like why wouldn't we do that? I don't think we have any particular determinations to say like, well, it has to work just this way, right?
+
+Joey Williams
+Yeah, there's, there's also, um, the plugin system to CuddleCode. Like I had briefly mentioned that earlier, uh, it sounds like that Team AI product, if you want to call it a product, I don't know, um, could just be and like into the CuddleCode ecosystem as a plugin as well. So you could keep it as a separate app, do whatever you want with it, but you're going to see those changes automatically get populated within CuddleCode. And if you have a session in CuddleCode, it would be able to get that information directly through the plugin system, right?
+
+Puru Agrawal
+So I think that would make a ton of sense, right? And certainly there's this kind of I don't think it happens all at once, but numerous incremental handoffs between the specifications process and the execution process. But, you know, I guess sit down and sort of talk through how that all works.
+
+Joey Williams
+Yeah, so for the 2 larger projects, um, that you had mentioned that you guys have coming up, um, Alex's availability is a little more strict than mine. Adam kind of spoils me. But I mean, if Adam is fine with it, like, I don't have any issue with sitting down with you guys and going over what, like, how I would approach things within Cuddle Code given whatever the problem is. Like, we can break it down and—
+
+Puru Agrawal
+Yeah, like, I think for sure We appreciate the fact that you have a day job. And so, you know, I think I'd be looking to try to figure out how do we maximize your impact while minimizing your time and sort of an advisory slash coach role. right, with using CuddleCode maybe as a platform is definitely one way to do it. And I'm happy to sit down and sort of describe what the product concept is, right, and then get your thoughts on how we go about it. But our goal would be in a couple of months to knock out a fairly substantial working prototype for this capability, right? And the capability at a very high level is compliance management for vaccines for children across the 63 jurisdictions, right, inclusive of the 50 states that it works on, and sort of taking the states' different compliance statements and forward engineering from those a compliance solution that integrates with data loggers, with EHR systems, with inventory management systems, etc., etc., in order to be able to do things like detect temperature excursions, etc. And I can, I can sit down and describe this in more detail, right? But I think Interestingly, there's aspects of it that you guys will just understand naturally because of what FSG does, right? And like, FSG also has aspects of this IoT environmental monitoring types of capabilities and whatnot. A lot of Chariot does that kind of thing. This is in a different vertical, but not necessarily different concept. But like, you know, that's kind of like at the data logger level, but this becomes a compliance management solution. Like, okay, when the fridge gets unplugged or the power is disrupted and you have these vaccines sitting in there, there's a temperature excursion, like detecting all of that, et cetera, is important and great. And that's a lot of what Honeywell and Siemens and others do. But ultimately, the compliance solution to say that, okay, somebody acknowledged that event, they notified like the primary clinician on the floor, the primary clinician kind of isolated the vaccines to not be used. The manufacturer's guidelines were cross-referenced based on the excursion to see if the product was compromised. If there were children who had been immunized or vaccinated using the compromised stock, then like orchestrating, like rescheduling them, revaccinating them, filling out the corresponding reporting and Uh, the, the, the forms and whatnot. that are required in order to then report back to your local jurisdiction, whether it's the state of Colorado or the city of New York or whatever. Like, hey, here's the excursion, here's the compliance steps that were taken, here's the people who signed off on it, blah, blah, blah. Like that whole solution, right? And what we're looking to do is effectively forward engineer that solution by distilling all the compliance requirements from the different state regulation guides, which are all on their websites. But nobody knows how to take these hundreds of compliance requirements and actually turn them into a system that assures that it's going to help you manage through those requirements. Right? And this would be the kind of system that previously would have taken us 2 or 3 years to design and write. And right now the idea becomes, well, in 60 to 90 days, let's create sort of a working capability. And we would create simulations for the EHR systems, the data loggers, the LMS and training systems, etc., etc., that we haven't integrated with on day 1. But through those simulations, you could basically exercise the compliance workflow from end to end and like really showcase in detail the capability. And then as you implement the solution for a particular hospital system or whatever, at that point you plug into their real EHR and their real LMS and their real data logging system, etc., and sort of replace the simulation, right? Right.
+
+Joey Williams
+Yeah.
+
+Puru Agrawal
+So that's one of the 2 systems.
+
+Adam Haynes
+I don't— seeing what we've done with it on some insanely fast timelines. And I tend to be just hyperbolic sometimes anyways, Prue, but that sounds easy. Um, the— like, if we, if we wrote down everything you gave— man, my dogs are annoying. Um, everything you just said, and then probably for some states or jurisdictions that don't make it super easy to find just on the internet, their regulatory stuff.
+
+Puru Agrawal
+Well, even here we don't have to boil the ocean. Like, we can start with, yeah, 3 states, right? Texas, Colorado, and California. And then over time expand it to additional jurisdictions.
+
+Adam Haynes
+Yeah, I, I— Joey, how, how fast do you think a working MVP— my number is going to be absurdly low.
+
+Joey Williams
+Yeah, I mean, I, I don't I don't want to like shoot myself in the foot, but like, honestly, if it were me and someone came to me and said this, I would overquote them and say a month and probably get it proof of concept done within a week or two. I don't think it would take— so we've quoted 3 months, right?
+
+Puru Agrawal
+And if we could do it in 30 to 45 days, I think that would be great. I think a lot of what would take time here is in the human decision-making. Yeah, around— yeah, there's some nuance for sure. You know, here's all the things that could be done, like what do we want to do, right?
+
+Adam Haynes
+Yep. Yeah, I mean, this is definitely this, and I, I say this from personal experience, Prue. Once you as a team are working here and drive it, like, I, I distribute a lot of the, like, intent creation and, and stuff still, but it puts, like, you in superpower mode where, like, the whoever's the product owner working with the customer driving those product decisions you have such a massively improved ability to iterate. Yeah, that you can act on learnings because almost any iteration is a low risk now. You're not taking a, oh, this iteration might take 3 weeks the wrong direction. You'd be like, it took us 30 minutes the wrong direction. Like, yeah, we learned and we can, and we can correct path in 30 minutes, which is like, you know, the agile wet dream, right? Like, so it's— yeah, so I, I think that's— that project sounds perfect for this flow. One thing that I think will be really powerful for Altus Nova, um, that I don't think Joey or Alex mentioned, and I know I didn't mention it yesterday, is we set you guys up as an org. You'll actually be able to see everyone's sessions. So if Doc gets sick for a week, someone else can literally pick up what he was working on, not just pick up with the code even. So like all the full working context, it becomes shared, um, in a way that like Claude and stuff doesn't really even make possible.
+
+Joey Williams
+So yeah, um, I mean, we didn't even touch like the whole local inferencing stack. Like we have, uh, so I don't know if you guys know what GeForce Now is. But it's a streaming gaming solution. I'll just say the guy that's working on this, he pulls his weight. He works for NVIDIA. He is working on our entire load balancing structure for local inferencing, which is— it was called worker nodes. He's changing it to cluster. But you can have multiple DGX Sparks, BU100, 200, 300, whatever you want. And when you spawn a session that's using Quinn or Nemotron or anything, it'll load balance automatically to the machine that has the most resources. So it's, it's just kind of like RANs, what we talked about earlier, but a little bit flipped on its head because this is local inferencing. And that is, we do have kind of like another customer that uses CuddleCode. It's Motiva. They're the largest oil and gas refinery in the US.
+
+Puru Agrawal
+Yeah, we saw that on the RAN website.
+
+Adam Haynes
+Just a small company.
+
+Joey Williams
+Yeah, just a small— yeah. My background is actually industrial automation. So I've done stuff for Motiva. Off and on since like 2014 or so. But yeah, they, because they're industrial, because they're an oil and gas refinery, they, you know, hate frontier models. Everything I do for them has to be local inference. So I have a handful of machines on my local network that I do work for them for. So yeah, I mean, I'm just saying, like, if you have a client that is very sensitive with their IP, like, this more so than any other, like, ADE, agentic development environment, enables you with local inferencing than any other product that I've seen yet.
+
+Puru Agrawal
+Yeah. And so, you know, I think in the consulting world, with AI, like selling hours becomes much more challenging, right? But I think with a capability like this, so we've always stayed away from fixed bids for any sort of a system, right? But with a capability like this, you could have a 3 to 5x buffer built in and still be quoting something that's pretty compelling for the client, right? And so you could overcome some of the charging per hours challenges that you have, right? And basically you're doing it by bringing in this capability and the methodology and the way of working that just lets everybody move a lot faster. I think there's very much the whole aspect of what are all of the nuanced decisions that ultimately need to be surfaced and agreed to by various parties, right, in a compliance type of solution, etc. But, you know, I think that's kind of in this first case what we would ultimately be working against, which is the system development is actually moving at a much faster pace than the human decision-making. I think the fact that can rapidly prototype concrete representations of what all of these abstract compliance criteria mean allow the human decision-making to move much faster because it's easier for folks to get their head around what it is that they're deciding, right? And then to the extent that you can leverage the agents in order to extract all of the particular compliance-related decisions that are baked into the logic of the system, then again, you can make it a lot easier for people to review those, agree to those, disagree, change, etc. Right? I think just kind of looking at your changelog and kind of the number of rapid iterations that you're making and like committing new code on this daily gives me some confidence that you actually have like a strong process for change control. Right. And to not like have random cascading unexpected changes to the system each time you make new changes, which is something a lot of groups struggle with when they're working with AI. Right.
+
+Joey Williams
+Yep.
+
+Puru Agrawal
+So yeah, I mean, it's something for you guys to think about was made and, you know, if it makes sense, I'd love to figure out how do we try something together and how do we work out a relationship that, you know, is mutually beneficial. Sure.
+
+Adam Haynes
+I think I was sideboarding, to be transparent, with Joey on Slack. I think, uh, everyone's comfortable with supporting you guys on that project. Um, we can either on Slack or have another call or whatever, prove and work out if if there needs to be some kind of compensation to make it make sense. But, um, in addition to that, I think there's just a lot of value also in just having another serious project with some fresh eyes and an experienced team digging in. And that feedback can be invaluable to improving the product as well. So it's— it can be some mutual benefit there as well. Um, and also, I don't know about Joey and Alex, it, it tickles my fancy a little bit to see people able to kind of get superpowers sometimes. So you're all— yeah, you have a particularly experienced team, so seeing folks like Stas go 10x is a big deal because 10 Stases is a lot of Stas.
+
+Stas Skorobogach
+That's like, that's exactly so. That's what Guru just told, and my impression so far, I start to play locally, uh, with cuddle code, uh, and I have exact feeling our concentration so far and right now, it's, it's not competitive to this product. It's kind of orthogonal, and we more concentrating on some collaboration and common knowledge sharing things, uh, capturing this, uh, knowledge, random conversation, I think like this. And Kettle Code in its own turn is a tool that has a lot of features that we— I would love to see in our tool, but we definitely just don't have time and resources to work on these features, right?
+
+Puru Agrawal
+So I think there's, yeah, there are orthogonal products, and yes, we'd love to see some of these capabilities in our product, but then there's the whole other two-thirds of it, which is when you're ready to start building the thing, like, this seems like a great platform to actually build the thing. Yeah, exactly.
+
+Stas Skorobogach
+And that's what I'm trying to say. We, we definitely not concentrating right now. So our original intent was, and we kind of like keeping it, like, we are trying to not play on the ground of cloud code and other tools. So like for code, we're using just standard tools, right? Like that provided on the market. And for me, this cuddle code, that's some kind of just superstructure for these tools that address not even the limitation, but just like makes life simpler. Because what I see, many of the things can be like used from cloud, from cursor, whatever, but it will require constant manual support, constant like manual flows, and you need to configure them like manually every time for every project. And this tool just like Simply simplify this a lot. Like, what is— well, even the Team AI product that we're
+
+Puru Agrawal
+trying to build, I think we can dramatically accelerate the development of that product with CuddleCode.
+
+Joey Williams
+Yeah, so if, if you are working on like 2 similar projects but like different customers or something, you can go to, uh, the old project. Like, this is Project 1 and you're, you're working on Project 2. You can go to Project 1 and be like, oh, this was the agent that did phenomenal in Project 1. You can, uh— oh, I'm sorry, you would go to Project 2. You click this button, adopt an agent, and you would find that agent in Project 1 and click adopt. And what it does in the background is it looks at how that agent was applicable in its project, and it looks at the, your new project. If there's any LLM wiki data, it includes that, but it gets a good understanding of your new project, and it modifies the agent to be applicable to the project it's being adopted into. I've, I've, I've had to do that probably, I don't know, it, it's been over 10 times. Like, it's been a handful of times I've used that feature, and there's only ever been one time where I've had to, like, iterate upon that adoption, and it was a very small thing. Like, it, it was, it was actually a remote host thing. I mean, it doesn't really matter, but I can show you. It was It was, we had Wyatt in ABL programming language and we were adopting it or we were switching over to Rust and I had adopted this API development agent because it used the same, like, SSH tunneling to my FSG laptop. Yeah. So, like, agent adoption is also a thing. We didn't even touch on that. So Same thing with skills. You can do skill adoption as well.
+
+Puru Agrawal
+Yeah, so I think we're hooked and we'd love to learn more, right? And I mean, it's— we have no ego about this. I think this can help us move a lot faster and do a lot more and accelerate the products that we're trying to build in addition to the consulting work. That we're trying to do. So I gotta jump to another call, but Adam, I'd love to sit down and just kind of talk through, like you and Jason and I, how we work together.
+
+Adam Haynes
+Yep, will do. Okay, yeah, yeah, that's good.
+
+Puru Agrawal
+Another call, but thanks guys, really appreciate your time. Yep, likewise.
+
+Joey Williams
+Thanks. Bye-bye.

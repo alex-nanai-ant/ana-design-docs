@@ -1,0 +1,273 @@
+FSG AI Huddle
+
+Date: 10/5/2026, 6:03:02 PM • Duration: 55m
+
+Participants: Puru Agrawal, Adam Haynes, Stas Skorobogach, Jason Parrish
+
+Grain URL: https://grain.com/share/recording/f59949b2-741c-43be-b3aa-7f95e4e32eda/mw0ZhOjZG7v8PBFV2p3QtCdh6pBVVU3u91tg1L8u
+
+--- TRANSCRIPT ---
+
+Puru Agrawal
+Hey Adam. Hey, how's it going? It's going well, how are you? I'm doing pretty well.
+
+Adam Haynes
+Look at that, it's Stas. How's it going? Hey Adam.
+
+Stas Skorobogach
+Hey, I asked, uh, Chris Nasso also to join us.
+
+Puru Agrawal
+Cool dude. Uh, and so I think you wanted to talk about the stuff that you're doing, which is the first thing we certainly want to see, and then also some of the stuff that we're doing. And so I invited a couple of folks to join us to talk about that if we get to that part. Sure thing. Well, I definitely want to get to that part.
+
+Adam Haynes
+Um, yeah, I thought it would be cool to do a little, you know, show me yours, I'll show you mine. So sure, yeah, absolutely. So I'll jump in. Uh, fair warning at the beginning, I am not the absolute best person to, to demo all of this because, you know, I'm— I just play a developer on TV. I'm not Well, in my original, I pinged
+
+Jason Parrish
+Adam because obviously FSG is doing things and, you know, Adam's doing stuff and we haven't synced on this whole world of AI and IoT. And then also the last 2 years, Chris Nassau had worked with Primex, another client, and with Pru on another level of IoT-related types of work. And then we've also made a lot of our own AI decisions and are executing those decisions right now. And so I was excited, really just sort of an open brainstorm share. What are you seeing? What are we seeing? Yeah, absolutely. Part of this. So I'm super excited to listen. I'm gonna listen and I'm gonna hope to know.
+
+Puru Agrawal
+Another like completely unrelated thread, but we were working with a company called Domo and then Domo got acquired by Uh, I think the same company that your ERP solution is built on, right? They did.
+
+Adam Haynes
+Um, we found out about that the day it happened. They, uh, they were at our office. Okay. Yeah.
+
+Puru Agrawal
+So I think that's probably not today's conversation, but certainly a conversation for us to have. Yeah, for sure.
+
+Adam Haynes
+Well, awesome. So I will give you— so this is our little app. It actually has a website. I'll send it to you guys. You can play with it and download it if you want. Um, the work-in-progress version of it's available for people to use. Um, we actually built this with some friends across the industry. So one of the engineers that works on this actually works at Nvidia, so we have insider access to buy discounted test hardware there, and then a few other companies. Um, and this is— it's called Cuddle Code just because it needed a cute name. Um, but it's effectively like a, a, a handler for handlers. Um, so it, it wraps around any AI toolchain that you want And you set up projects and stuff. So, and that is so you can— if I deleted my account, I could just show you the setup. But basically any major, like, kind of frontier thing. So you can use Claude or Codex or anything like that if you want, or you can run local models. It'll support running them across multiple machines, all that kind of stuff. But I'll walk you through the basics. So One of the interesting things is it is more organized than just trying to use Cloud Code, so you can manage a lot of context around projects, set up custom agents per projects. Has a lot of just, I don't know, easy things that you can do yourself other ways, but just well managed and easy to use, like code research, context management. You can add multiple repos to one project, which is annoying in the CLI sometimes to remember to do that and get through all the permission prompts. Things like that. It actually will report back your— I just set this one up for the meeting, but your actual costs that you spent in AI in this project. And then a bunch of other kind of stuff that you can do there. Everything still works in sessions. You can either— you can use the chat view, which they convinced me to try to use, though I've been the CLI view forever. That's the only reason this view, which is really just whatever your LLM of choice interface embedded here with some hooks that make it work here. The stuff that's more unique to this is, so we have Intents, which is basically like if you write like a shim for a story, it'll do research based on your repo and your other stories and your other repos and the internet and try to help you groom the story and then come back to you and you can take that and then push it into action projects. Or just projects. You can manage pull requests all on our interface. Automations are something we're actually already using in our stuff, where it's basically you can run an agent based on, you know, cron job, webhook, anything like that to achieve a thing. So we're using— we're actually using this functionality for what we're building out for our service automation. So when we get a new work order that comes in, fire off the webhook that basically does the, um, dispatch automation. Um, as of last week or the week before, uh, the system also supports— which I don't think I'll even be able to show here because I don't know how to do it— um, it supports Jev, which if you guys haven't used that yet, it's like a more deterministic AI. So where you kind of provide, you know, the possible outcomes, and then it uses AI instead of building out like a rule engine to kind of come to the conclusion. It's extremely cost effective compared to, you know, dumping 10,000 lines of JSON on AI and saying, use this complicated prompt and tell me what to do. So instead we're able to use JEV, or there's an open source version of it called Layla that will actually run locally on your machine even to say, here's the information. Here's the— so for this case, like, here's the possible technicians we could assign this to and their information. So these are all the possible outcomes. It's either none or one of these, you know, 10 people, and that's just based on a basic API request. Now based on this information, do your evaluation and tell us which one's best and why. Um, and that runs in like, you know, half a second instead of, you know, a minute for a normal Claude request. And then it also costs, you know, a thousandth of a penny instead of 10 cents or whatever. Um, so basically it does not return
+
+Stas Skorobogach
+any tokens as an output, right? It just like returns the predefined, one of predefined choices. Basically, yeah.
+
+Adam Haynes
+And it does a lot less. Obviously you're providing it far more of the context for its decision-making. And then it's, so it's not doing, it's not using, you know, 10,000 tokens to make a simple decision. So it puts a little more onus on us, but it's also extremely fast and effective. It was really easy to set up. So if you guys haven't run into that one yet, it's fairly new. I'd look into that. Um, and then there's these other things that are kind of more behind the scenes. So RALF loops, if you guys have been around AI, you've probably at least read a blog post on this. Um, this is a concept of like you give it, we would say you give it an intent because that's the language we use here. And you basically say, here, let me move these videos and I'll show you. Um, if you've done an intent, you can actually pick one and it'll generate kind of the acceptance criteria, and you can tweak it as you want. And you can say, okay, you're going to loop over this up to 25 times, and just to make sure that you meet all my requirements at a level of excellence— 25 is a high cap, but you can leave it there. But then you can also do, if it's more critical or you want a more skeptical judge, it'll basically run another clear, clean session as an outer loop that says each step, instead of just picking it up and reevaluating with the same context, with fresh context each time and with a much more aggressive prompting, like be a really mean judge to the progress made. And then you can just let this run. It's not particularly fast because especially if you have it on 25 times, but it is the kind of thing where you set off especially large tedious efforts that, that would consume a lot of human time, but aren't like critical from a technical complexity standpoint, right? Like, I'm not worried about this. I'm not going to do this if it's something that's got a massive amount of security concerns and stuff. But if it's like, God, we really need to just work out this entire— like, here's, here's this proof of concept we need to build. For everyone's favorite example, let's pretend it's a CRM. Like, just shim me out the entire database schema and CRUD API for a CRM. Um, we wouldn't do that exactly in this case, but— and it would just do that. And at the end of it, it'd be like, here you go, like, this, this is what you asked for, um, and here's why, and here's all the requirements, here's the things we rejected. And, um, yeah. And then let's see. Forge is like a tool for managing your, like, the agents or skills that you can set up inside the projects and then actually iterating on those. Yeah, we're using it. That's IBM Forge, right?
+
+Stas Skorobogach
+It is not. This is just a name we picked.
+
+Adam Haynes
+It's similar though. Ah, okay. So yeah. Um, and then we have pipelines, which are basically like pre-set up game plans for using the features inside of our toolchain here. Um, that— so like this one is like, okay, it's gonna improve, then it's gonna automatically do our QA step after that, which is another like predefined step of things. I'll click a template and adopt onto the project. So it's going to run through this, this Ralph loop that we just talked about, do QA, which if you have it set up can actually— if you're running it, if I'm running it locally on my computer, it'll actually like do— I can't think of what it's called. It'll actually open the browser and click around and do all that kind of stuff. But because it already supports out of the box doing this. A lot of our guys either have a virtual machine or machine at their house that is just— that it runs this part of it there so they don't have to worry about it, you know, popping up in front of their face and stuff like that. Um, and then creates a PR, does a code review and all that kind of stuff, and publishes that. We are not— I don't know about you guys— we are not of the mindset of ever just letting the AI merge code. Um, maybe you guys have gotten that confident. We definitely have not. Um, maybe that's just because we all still want to have jobs. Um, and then the last few ones here, you can add remote host computers, um, worker nodes, which are really just for using pooled GPU resources for like local models. And then there's a couple of like context management things. So we have WikiLLM embedded so you can create effectively just Markdown files that are, that are context. Intelligence, which is really like just a search engine and summary builder for all the project sessions, PRs, and stuff you've managed through here. It's just a fancy way to search and get information out of them. And then Discover, which is just a fancy help page. So this is all the crap. I've skipped a bunch because I forget about some of it's kind of embedded in here deeply.
+
+Stas Skorobogach
+So for WikiLLM, is it local for your setup or is somehow shared across the team? It works either way.
+
+Adam Haynes
+So I have it set up locally because I frankly don't use it that much because I'm trying to do my job instead of their job. I try to be disciplined, I fail sometimes. But the team mostly actually uses it in a shared environment. So it's actually running in the cloud. And then we share context repos. Everyone can work together on stuff without reestablishing the baseline. And then they just have those remote hosts set up. Sometimes they just have it set up on the computer they're on, so the cloud version can run it locally. But then, like I said, they run it differently.
+
+Stas Skorobogach
+Yeah. I mean, this looks really good.
+
+Puru Agrawal
+And so what are the kinds of things that you've been using this with? We, our team uses it all day, every day now.
+
+Adam Haynes
+So they basically have this open instead of, you know, Cloud CLI or the sidebar in Visual Studio Code. Studio Code or something, um, and they're running through basically the baseline intents, um, and stories here. There— I didn't show, like, we have— there's a full linear integration in here where you can be like, just like grab this story and work it and then update the story and then do all that stuff. Um, yeah, so I would say about 90% of our code output is using this tool today. I mean, this is huge.
+
+Puru Agrawal
+It's pretty huge. Yeah, that's what I thought.
+
+Adam Haynes
+I thought you might like it. If you guys want, um, I'll send you a link after. You can go download and play with it if you want. Right now there's no monetization or anything like that. I think some of the guys involved dream of one day selling it off or something to someone interested in doing something, you know, more market with it. Uh, but so far, huge value. Like I said, it's already getting used at a few very large companies, um, internally.
+
+Puru Agrawal
+Um, so it's really cool.
+
+Adam Haynes
+And I, like I said, I, I could scroll through this and see the stuff that I missed that are kind of like buried features. Um, you can connect it to Discord and Slack and control it from there if you're one of those kind of people. I refuse to do that because then I would never stop working. Um, but yeah, and if you really want to— this, this seems cheesy— we actually now have it where it generates optionally when we do a, a release, like a version. Um, it generates like a motion graphics video that's like a basically like an animated PowerPoint. Uh, it's just a very nice one. Um, that does a summary of the, of the release notes and also writes the release notes emails and everything, all just by like clicking the button, um, which makes for, you know, nice easy user communication and stuff. The goal is basically it's got a little bit of the kitchen sink, and probably over time some stuff might get pulled out because it's a little too, too much. But the intent has been like, hey, let's just keep as much of our stuff like, that's just a pipeline that we can manage context, we can manage intent, we can do code reviews and security reviews. But anything that's a distraction to like delivering business value, can we, can we just build it into this pipeline? And so far, we've had a lot of success with it. And you said at the start that this is running
+
+Puru Agrawal
+like kind of in sync with Claude. It's up to how you want to do it.
+
+Adam Haynes
+I have a, let's see. So I am logged into, here we go. I'm logged into Claude Code, but you can run, so you can run Claude Code, you can run, Let's see, how do you do it? But you can, you can connect it to anything. You can see there's— here we go. There it is. So basically any cloud provider, but you can also do any local model. You can set up Ollama locally.
+
+Stas Skorobogach
+But sorry, I don't find it out. Just to understand, when you're saying connected to cloud, you mean like connected to cloud to Anthropic models, right? So in this case, because, because of
+
+Adam Haynes
+the way we connect, you can actually use a Claude code plan without violating the terms of service, which is right now exponentially cheaper than using an API subscription. You can just use an API. It actually asks you when you sign in which way you want to do it. Um, but all of us, I just pay for the whatever, the max plan as part of our team, premium seat, uh, because from painful personal experience, it's about 20 times more expensive to run the team on the API pricing model. Yeah, absolutely. And that's like actually what I see.
+
+Stas Skorobogach
+So for example, I'm very actually using Cursor And it's not only about the cost, but I have like number of tools already configured there, right? Like, and it seems you too can connect in the right mode to my local cursor, and I don't need to reconfigure like everything. Like these, the tool automatically will have access to everything that configured there. That's really cool. That's really good approach.
+
+Puru Agrawal
+And so, like, when you're working in this, it seems like the team members can be using Claude. And then is this mostly focused on kind of taking the specifications and then doing the build with those specifications, or you said you're also using this for like requirements definition and designs? It's mostly for the former.
+
+Adam Haynes
+We're not doing a lot of— you can do like through here, like more of like, or it'll try to help you with like define it. I don't really like it very much, to be honest with you. It's, I think, depending on how— I know you well enough to prove you would not find it useful. You'd be like, this is just other people's opinions. I don't know. It's useful if you have no idea what someone's talking about and you got like, hey, user reported an issue, doesn't really make any sense to me. Or I'll give you the perfect example. We had a feature request for Electrical submittals management. I don't know a lot about electrical submittals despite working at an electric— electrical service and construction company. So that is a case where you would come in here and be like, here's the problem in the feature gap, go use multiple loops and Claude sessions in a cleaned up thing where I don't have to understand what you're doing. So I can come in here and just be like, Give it a title, so submittals. I can link it to the linear story, which, you know, may just be a sentence right now, or I can say— well, can't— let's see. They want to manage submittals. For electrical construction. And, you know, it's part of this project, yada yada, create intent. And now it's out and you can peek at what it's doing. And it's going to go out and generate basically a full product project with a product requirements document. You can refine or you can Frankly, at the end of it, you can discuss it with the agent if you want to refine it. And it's going to base that both on any repos that your project you told it it was a part of has access to. So it uses kind of, you know, your database structure, your UI patterns, everything else, and your language to make sure it's understanding what you're talking about. But it will also do, you know, web calls, try to figure out what, what might be the best. Yeah, so it's— yeah, that's basically it. So it can be useful there. It feels more useful the less you already know. Because in my experience, like, if you already know pretty precisely what you want, just running that through the implementation loop for a proof of concept is more effective than you know, this type of thing. But it can be if you're like more in a discovery state. So, and so once it comes back with the
+
+Puru Agrawal
+PRD, what do you do with it? You can actually then— you have a couple of options.
+
+Adam Haynes
+One, it'll ask you, do you want to— do you just want to like update linear with this information? Um, And so Linear is kind of your requirements management tool.
+
+Puru Agrawal
+Yeah, that's what I use instead of Confluence or Jira or anything like that.
+
+Adam Haynes
+I think I accidentally killed it. And then you can, so you can, or you can, it'll give you the option and it was a checkbox I could have done where it'll automatically push it into a what they call here, these into a loop, right? Like, go ahead, once you're done planning it, if you really want to take your hands off the wheels, both plan it and then go implement it.
+
+Puru Agrawal
+Um, that all feels super gross to me.
+
+Adam Haynes
+Um, but I know there are companies basically running that way right now. Um, so you can do that. Or you can kind of edit it and then use it. I, like I said, I don't use that piece of it very much. Some other members of the team use it a little bit more, but so I'm not the best to tell you. Yeah. All right, here you go. This is what it came up with. So Very basic steps, but they want that. What exists today? I do like, and it does tend to do this, it will try to push back on you like, should this be in this product? And then kind of like, OK, well, assuming that you know what you're talking about, it'll walk you through what it expects to edit, what it thinks you'll add. So it just generated all of this. So, and the quote unquote technical decisions are based on the patterns that observes us already doing. And then it does these hilarious Claude code time estimates that are based on it if it thinks a human was doing it, which is funny. These are great for me when I share things with executives to be like, well, this is really 3 weeks of work, but I might be done tomorrow.
+
+Stas Skorobogach
+So, and it generated based on what you have locally on your machine?
+
+Adam Haynes
+Yeah, for this, when I set up a project, here, I'll show you. You can, you basically start with either making a new quote unquote project. Or you can actually just start with picking a Git repo and start from there,
+
+Stas Skorobogach
+and then you can add more
+
+Adam Haynes
+repos and whatever else you want to do to manage that context.
+
+Stas Skorobogach
+This whole project product actually just started
+
+Adam Haynes
+as, hey, almost all of our apps are not a monorepo. It's really nice to be able to not have to reset up every session that I need you to know where the backend is and I need you to know where the schema is. I need you to know where, you know, our auth service is and how that works. So let me just set up one time all the basic code context. That's what this entire platform started as. It's really annoying when you have a microservice system to, okay, I have to tell you which repo to go look at for every single thing and give you permissions each time to, you know, and now obviously it's ballooned Massively beyond.
+
+Puru Agrawal
+Yeah, so I'd say, I mean, this looks really cool, right? Our focus has been more on the product management side. Yeah. To say like, hey, if you wanted to support something that's like spec-driven development where you want to have the strong product requirements, the technical design specifications, the user experience specifications, specifications, etc., all up front, and then sort of feed that into the build process, where in the build process the engineering team might be using these kinds of tools in order to dramatically turbocharge the creation, right? Then like, that's, you know, those features and capabilities. And in there, there's a significant amount of like collaboration with the business, right? To say like, hey, look, we're seeing these decisions, these trade-offs, these requirements, etc., etc. And so, like, can we bake these into the requirements, into the designs, into the technical architecture, or does something need to change? And then having kind of decision identification, decision routing, and then decision feedback with approvals, etc., right? So that by the time something comes out of the specification stage, you have human judgment of all of the various domain owners within the organization baked in, and then the accountability for those decisions is put back on those humans because they had to weigh in on those decisions, right? And there's a audit trail of all of those decisions made along the way so that ultimately you come out with a set of specifications that can be handed over to the engineering team to go and build, right? Right. And I'm wondering, is there a way for us to piggyback as sort of like step 1 on what you guys have built here as steps 2, 3, and 4 Right? And that could be a really powerful combination of capabilities. And then we have a tool that we've built called the Altus Nova Assistance, which is sort of an enterprise RAG on steroids, right? And it sort of collects all the, what we call enterprise context around every Zoom call recording, every Slack and Teams message, emails, etc., etc., and kind of brings that in into the specifications process as like unwritten context, right, that can inform a lot of the formal content and decision-making that has to happen. And it seems like there's maybe some similarities between what Anna is doing and sort of that Discover section that you showed. Yeah, yeah, I think it's— I think
+
+Adam Haynes
+there's definitely— well, the Discover section maybe is focused more on artifacts,
+
+Puru Agrawal
+like, hey, here's my policies and guidelines. Here's my compliance criteria. Here's my HR onboarding guidelines, etc. Right? Right.
+
+Stas Skorobogach
+And I think, like, what's also important, like, differentiator for our tool, which, like, not all of these tools provide. So our contexts, right, they are shared contexts. So you don't need, like, then not existing former repository, you don't need to check out them locally. So server-side process maintain them, bring information, index it, and like no matter which local setup you have, your client always connected to them and always has access to this. So that's a little bit different because like in my experience cloud and all other tools, they anyway, like in some form require you to download this information and update it like more or less like frequently to have like the local version. And for HANA, we just keep it everything in cloud and have some permission model that distinguish which information can be accessed, which information cannot be accessed, right? And like what you can do with it. Yeah, like we've been looking at—
+
+Puru Agrawal
+because we're a consulting company, right? Right. We're not a product company. And so we've been looking at lots of different products that are out there claiming to kind of leverage AI and turn kind of the systems that are being rolled out by AI, you know, into like simpler, manageable things, right? And I think we haven't liked any of those systems that we've seen because they're all built around this notion of sort of point-and-click system definition through AI, which is like what I would describe as low-code AI attempts. And then those are just very dramatically limited in terms of what you can ultimately do with them. They don't support like the full software lifecycle development capabilities. They don't support like granular change control and stuff. And so, you know, and then the impressions that I've walked away with, with a lot of these systems is that they're not really written by people who built like sophisticated, complex enterprise systems that actually have to be maintained over multiple release cycles. And you have to have absolutely reliable change control around them. Right. And so have you guys run on, on that topic?
+
+Adam Haynes
+Have you guys run into, only because I'm seeing it everywhere and hearing about it from friends, like the world's struggling to still believe that change control, change management is the thing in the, in the age of AI? Like, is, are you guys running into customers that are like, they're getting hooked on the, uh, the crack cocaine of AI so fast? And then, so I think we're saying about change management, a lot of customers who have these
+
+Puru Agrawal
+completely unrealistic expectations that nothing matters anymore because of AI, and you can hire kids out of high school and they should be able to build these systems. And then, like, our reality is that the engineers who are working with these systems have to understand everything about traditional software development, software stacks, technology, network engineering architectures, and they have to understand all the new stuff, right, around how do you work with AI to kind of much more rapidly accelerate these things at design time, as well as like, what are the kinds of capabilities that AI brings to the table at runtime, right? And so like, for us, we are in kind of this camp of we are the furthest thing away from simple systems. Like, yes, you can have incredible throughput and incredible capacity, but you have to have an incredible level of knowledge and experience in order to effectively manage these things and to effectively deal with all of the randomness is not the right word, right? But like, things don't always go down exactly the path that you expect, right? And a significant portion of that, like, in our experience, is that, you know, AI is really good at filling the gaps with assumptions, and those assumptions are just not caught. And so there's all kinds of unexpected behavior that gets introduced that people are not looking for, and yet this kind of behavior can create massive risk to an organization where all of a sudden, you know, there's business rules that you assumed were going to be in there And then they're not, right? Or they're working differently, et cetera. And so our focus has been around, there's kind of a rapid prototyping exploratory approach with AI, which is awesome. It lets you take difficult concepts, turn them into something tangible and start getting meaningful feedback off of those from the domain owners who ultimately own the decisions and the accountability. But then there is the very clear set of specifications that must ultimately be fed into the engineering process that can help us reliably then create, version, manage, and over time predictably change those systems. Right.
+
+Jason Parrish
+And to your exact point, jumping to the pilot sounds so interesting, but pushing it into real-world use cases, everyone's choking. And opposite of you, yes, the change management friction is actually the number one response that we're getting from— that's only coming from people trying to actually put that pilot in production. Until they try, they still think it's gonna be easy. Yeah. Yeah.
+
+Adam Haynes
+And so, you know, when we
+
+Puru Agrawal
+first started working with you guys back in 2018, I think it was, one of the things we really appreciated is that you sort of saw methodology and risk management in the same way that we see it, right? And it feels like you still do, which a lot of companies just don't. We do because I have to be able to sleep at night, right?
+
+Adam Haynes
+Exactly.
+
+Puru Agrawal
+And so like, we're out there kind of living in this world where right now there's a few people who've gotten bitten hard And are starting to see like, oh, this isn't just all like snap your fingers and it works. And there's still a ton of people who have to learn that lesson. There's a ton of hype and BS in the news cycles that, you know, are telling CEOs to expect that one developer in cloud code should be able to give them massive systems overnight. And yet at the same time, there are these incredible capabilities that are maturing really, really rapidly, and then bringing them all together to deliver systems. Like, there's absolutely a science to that, right? Like, it's still computer science. It's not computer magic, right? And like, I think there's going to be continuously a lot of noise for another 12 months, but you're going to get more and more of the groups who've sort of come to the other side of that spectrum to say, okay, it's a methodology, it's a way of doing things. You have to optimize for control, you have to optimize for costs, and you have to have realistic expectations. And ultimately, you're optimizing for better outcomes and not just speed. even though speed in the rapid prototyping exploratory component of the systems definition process is absolutely very valuable, right? I think what you just showed me and the fact that you're saying your team lives in this tool, right, is really, really exciting and encouraging. And what's going on in my mind is like, how can we wrap some of the things that we've been doing around some of the things that you've been doing and have an end-to-end capability? Yeah, that's really interesting because I, I mean, obviously
+
+Adam Haynes
+mine has been like strictly engineering-led, right? This has been like a means to an end because my guys like to be productive and then I gave them some rope to run with. Um, and because of that, we have this really cool useful thing. Um, so yeah, no, I'm— we should definitely talk about that and see if there's a way that that can make sense because I— we don't cover the beginning part of that much because we don't I guess that's not a— that's a pain point that makes perfect sense for you guys and has not made— not felt like a massive need for us. So it— but I see it, it makes total sense. And I'd actually love to explore
+
+Puru Agrawal
+that with you as well, right? Which is the fact that you don't see a massive need in having strong specifications defined for systems. Is that because There's just no longer a need for that. Is that because you can iterate quickly and just, yeah, again, don't need it? Or is it because you're mostly working on incremental updates to existing systems and not building out like entirely new systems or what? I think it's like E, all of the above.
+
+Adam Haynes
+It just depends on the situation, right? So we're doing— obviously there's always incremental stuff. So if I, if I talk about like our sales system, those are, those are primarily incremental. It's new whiz-bang things for sales teams and stuff. Can iterate fast, not hyper business critical. Like just make it through our basic QA process and basic vetting by the product owner for that. And what we learn along the way, we learn along the way. Harm, no foul, right? And what does it mean, like, vetting by the product owner?
+
+Puru Agrawal
+Yeah, like, he, he— we still have
+
+Adam Haynes
+an expectation that they're— and I— we don't have that many product owners. Um, John McGee, who you guys probably virtually met. Yeah, we met him.
+
+Puru Agrawal
+Yeah, so he's, you know, he's still
+
+Adam Haynes
+talking to our sales managers, our chief growth officer, talking to salespeople, talking to, you know, our, um, AR team because they're responsible for accounts and sites and stuff like that. And making sure that like we're making at least directional decisions that don't flow counter to any of our larger strategies. But for a while now, most of our work in that space is like Well, how can we just better empower our salespeople? So for example, like last week we launched a feature that takes either a lead or an opportunity, like whatever information you do have, does some research on it, finds like additional contacts, finds the news about the company, suggests like next actions. And we have a task management system that's now enterprise-wide that we built And allows you to like, these are some tasks you should probably add to your to-do list to try to close this deal. And it does all that kind of stuff for them. So it's, it's actually called like the Deal Coach. So it's like, here, if I was your sales manager, here's what I would suggest you, you consider doing next to try to close this deal. And, you know, it calls out the gaps that they have in the information, or if something smells funny, like, hey, you said this is a you know, new lighting for a baseball field, but you said it was $12 million. That doesn't make sense. Like, yeah, things like it. Frankly, it does a better job of sales managing than our sales managers do, um, which is a whole different problem.
+
+Puru Agrawal
+Um, but then on the, on the opposite end, so we have
+
+Adam Haynes
+Avra, who you guys met, who she was previously our finance manager, so she has a shortcut mentally. Who is responsible for all of our finance projects. And those are extremely methodical. This is, this is where she might actually would benefit because she's actually— she might be mildly offended by this, but that's okay. She's used to getting mildly offended by me. She gets— AI steers her wrong frequently. She's trying to take advantage of it as much as some other people do. Her husband's in the industry. But because of that, and FSG has a lot of specific context and requirements, if she's not very close to what you're describing, then it will make a lot of bad assumptions. And obviously in finance, that's a dangerous thing. So it ends up making work for her a lot of times to clean up after the AI instead of providing a tool that's really structured to let her get to the right, the right outcomes. And I think she probably gets as many frustrations out of it in the planning stages as she does wins, um, which is unfortunate for her because the rest of us don't have as many of those specific challenges. Yeah. Um, and also because, I mean, you guys, I mean, at least you, Jason Pru, you know Bill. Bill's a creative engineer in his life. Um, so like the way FSG does everything is not necessarily Uh, gap, though we're trying to get more there. It's not necessarily how someone with a finance degree would have made that decision in 1999, but that's how Bill made the decision. So we stood— the reality of today still, still has to matter, right? So yeah, and AI does a good of assuming the averages, and FSG sometimes falls outside that range pretty dramatically.
+
+Puru Agrawal
+And it's not— so I think I would love to get your feedback on kind of the things that we're doing. Sure. And if there's like, based on this conversation, it feels to me like there is a meaningful Uh, way these 2 things connect together, right? But you may not feel that way. Like, you may feel like, oh, it's, it's completely different, or the things that you guys are doing covers the things that we're doing, or that the things that we're doing don't really matter to you guys, right? But like part of what we would take you through is kind of this notion of complex systems being implemented, this spec-driven development approach, and ultimately like feeding clear approved specifications into that process, right? So that this can all work well. And then, you know, the system that we built focuses on kind of pulling in informal context from Anna around all kinds of enterprise knowledge, right? And then working in order to create the specifications, leveraging agents, etc., to do that. And then there's a huge component of collaborating with decision makers, right? And so like identifying the kinds of decisions that based on roles and responsibilities within the organization fall on certain humans, right? Socializing those decisions, allowing those humans to kind of review the work being done and the requests being made of them, like working with their own agents to help them review and provide feedback, et cetera. And then ultimately, like having this decision-gated approach to moving through various stages of the software development lifecycle, right? And so there's implementation, testing and validation, production, all of which, like, we have not really tried to take on, like, with a product that we're trying to come out with, because we're saying, look, teams have their own methodologies, etc., in order to do those. We don't want them to have to redefine those. I think a lot of what You know, so everything that's going on here is something that we want to be able to feed into, and we feel like if you can reliably feed comprehensive specs into this process, then the teams on this side can much more reliably and rapidly create the inputs, right? So it's kind of like back in 2000, right? Like, oh, we're starting offshore to India, but nothing comes back good. And it's because, oh well, if we could give them CMM Level 5 specifications to code against, then they could code well against it and reliably, but it takes too long to create those kinds of specifications. And so it's not worth it to do that. And then ultimately, like Agile, sort of evolved in order to overcome some of those kinds of limitations and stuff, right? But now, like with AI, you can actually build out a lot of these specifications much more comprehensively and quickly. But it's a matter of making sure that a ton of critical decisions didn't sort of get lost in implicit decisions and assumptions that then, you know, nobody has challenged, and then they surface themselves in production in the real world, and then that's problematic. And so, you know, we can take you through what we're doing and then get your thoughts on, like, does that on the front end combined with what you guys have for 2, 3, and 4 make a powerful combination, or is it not really right? Yeah, I would love that, I think. Because at surface level, I think it does.
+
+Adam Haynes
+So yeah, and then, you know, I'm
+
+Puru Agrawal
+sure we could learn a lot from what you've done as well. And so that'd be great. And next time, if, if we want
+
+Adam Haynes
+to meet again on that, I can bring— so our lead engineer on that's a guy named, um, Joey. I think you guys met. He was relatively new. He's one of the guys that still lives over in Southeast Texas. Um, and I can include him on that as well because he's— he can speak more confidently to the exact details on, on why and how we did some of it. Um, that would be great. Yeah, I think that would be awesome.
+
+Puru Agrawal
+Like, you guys are way ahead of a lot of the companies that we're working with. So yeah, we met with We showed
+
+Adam Haynes
+a, I guess, 3-month-old version of this now. Progress was at our offices because they've been trying to meet with us for 3 years and I keep saying no, and I didn't want to pay an invoice on time. I wanted to put it off, so I let them come visit us, uh, and they, they wanted to show and tell what we were doing with the system, and they were like, okay, this is— you do— we— not what we expected. Yeah.
+
+Puru Agrawal
+So called WaveGuard.
+
+Adam Haynes
+Adam, that's a great, uh, wrapper to
+
+Jason Parrish
+this conversation because, uh, do you happen to know who you were dealing with at Progress? I'm so bad with names. I can pull up the email.
+
+Adam Haynes
+We had all of their— we had their entire sales leadership team for the Western Hemisphere here. Okay.
+
+Jason Parrish
+So the, the EVP of product of the parent company Progress, yeah, OpenEdge is his personal favorite pet. And so we met— he's also been named as the GM over the new Domo acquisition. Okay. And so we met with him 3 weeks ago. Uh, John Ainsworth is his name. Okay. Yeah, I know the name.
+
+Adam Haynes
+He's a— I've had at least one call with him.
+
+Jason Parrish
+And then, uh, the EVP of partnerships is also overseeing the Domo transition. And one of the interesting issues is that the Domo partnerships, their partners, implementation partners, their sales reps are very tactical, one-off mentality people, right? Not bigger picture. And so there seems to be a unique opportunity for us because of how we worked with you at OpenEdge and how we work with Domo For whatever reason, the original CTO of Domo wants to meet. I met him already once and walked through what we're talking about right now. And his job behind the scenes is working for John Ainsworth to communicate use cases that leverage the combined technologies. So he got very excited when he heard us just very gently talk about, well, FSG happens to be an OpenEdge client we worked with. So I'd love to think more about that with you and, and, uh, figure out how to tie all this together. Yeah, we, we may have some stuff,
+
+Adam Haynes
+uh, that we've done to frankly protect ourselves. I'm a little nervous about Progress as a long-term strategy. Um, so keep that between us. Um, there Their current CEO is treating the company like a venture capital company, uh, not like a software company. So yeah, I'm a little concerned what that means for their products they actually buy or own. Um, but one of the things we've done, and again, don't share this with them yet, is we, we actually have built our own, um, integration method to the Progress database. Um, they have a SQL broker basically. We built a Rust-based integration platform for Progress specifically so that you can actually run, basically build Rust code that works natively against the Progress database. But then we'll also, you can like flip a switch and have it run the exact same code against a Progress data, I mean a Postgres database. So it's, it's really like a migration in a box, which is why I don't want you to tell them that. Sure. Yeah, yeah, yeah. I think, I think you're right.
+
+Jason Parrish
+I mean, though people are dismissive, like that guy John spent, I want to say, 14 years at Computer Associates and And, you know, CA is famous for how they bought companies and swallowed their brains and left a carcass on the ground. So it is interesting. He claims to be different, but, you know, it's— yeah.
+
+Adam Haynes
+Well, let me know if maybe
+
+Puru Agrawal
+tomorrow or Wednesday you want to set up another call and we can take you through some of the stuff we're doing. Sure thing. I'll ping Joey right after this to get his availability.
+
+Adam Haynes
+Um, it's pretty open. He just doesn't wake up early. Uh, he's okay. He's in Texas, but he works like he's on like European time or something. I don't know. He works till like 5 AM, so he's— that's more like on Asian time.
+
+Puru Agrawal
+Yeah, I don't know what he's doing.
+
+Adam Haynes
+He's— I think it's actually just that he has 2 toddlers, so he's just— ah, that's when he could actually focus. Yeah, I just— I sent it there. You guys can go download Cuddle Code and log in and stuff. Like I said, it's all— if it breaks, that's why there's a beta thing on it. But you can— we'd love any feedback, insults, jokes, whatever you got on it. And also, we'll talk more about either tomorrow or Wednesday, talk more about it though. Yeah, that's awesome.
+
+Puru Agrawal
+All right, so we can just coordinate. I think we're still on Slack together, so we can just Yeah, if not, we can reconnect out of time.
+
+Adam Haynes
+Okay, sounds good.
+
+Puru Agrawal
+All right, sounds good. All right, thank you.
+
+Adam Haynes
+Bye.
+
+Jason Parrish
+Thank you.
